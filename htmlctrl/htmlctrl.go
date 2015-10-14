@@ -95,8 +95,10 @@ func String(s *string, desc string, valid Validator) (jquery.JQuery, error) {
 	return jq(), nil
 }
 
-// Choice a list of all possible choices and the index of the initial choice and returns a JQuery object
-// associated with it in the form of a choice tag. A non-nil error is returned in the event the conversion fails.
-func Choice(choices []string, init int, valid Validator) (jquery.JQuery, error) {
+// Choice is a special string that can only be one of the values in options. It returns a JQuery object
+// associated with it in the form of a choice tag. A non-nil error is returned in the event the conversion
+// fails. If s is the empty string then the initial value is options[0]. If is is not empty but not in options
+// then A non-nil error is returned. If s is in options then it is used as the intial value.
+func Choice(s *string, options []string, valid Validator) (jquery.JQuery, error) {
 	return jq(), nil
 }
