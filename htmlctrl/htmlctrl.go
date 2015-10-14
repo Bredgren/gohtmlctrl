@@ -43,9 +43,9 @@ func Struct(structPtr interface{}, desc string) (jquery.JQuery, error) {
 	return jq(), nil
 }
 
-// Slice takes a slice and returns a JQuery object associated with it. A non-nil error is returned in the event
-// the conversion fails. It includes buttons for adding and removing elements from the slice.
-func Slice(slice []interface{}, desc string) (jquery.JQuery, error) {
+// Slice takes a pointer to a slice and returns a JQuery object associated with it. A non-nil error is returned
+// in the event the conversion fails. It includes buttons for adding and removing elements from the slice.
+func Slice(slicePtr interface{}, desc string) (jquery.JQuery, error) {
 	return jq(), nil
 }
 
