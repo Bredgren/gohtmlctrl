@@ -2,7 +2,12 @@
 // reflected in the value used to created it. After conversion you should refrain from modifying the value.
 package htmlctrl
 
-import "github.com/gopherjs/jquery"
+import (
+	"fmt"
+	"strconv"
+
+	"github.com/gopherjs/jquery"
+)
 
 // ClassPrefix is used to prefix the CSS classes. They will be of the form ClassPrefix-GoType
 var ClassPrefix = "go"
@@ -48,7 +53,24 @@ func Slice(slice []interface{}, desc string) (jquery.JQuery, error) {
 // A non-nil error is returned in the event the conversion fails. The current value of the bool will be used as
 // the initial value of the checkbox.
 func Bool(b *bool, desc string, valid Validator) (jquery.JQuery, error) {
-	return jq(), nil
+	j := jq("<input>").AddClass(ClassPrefix + "-bool")
+	j.SetProp("checked", *b)
+	j.SetData("prev", *b)
+	j.Call(jquery.CHANGE, func(event jquery.Event) {
+		val := event.Target.Get("checked").String()
+		bNew, e := strconv.ParseBool(val)
+		if e != nil {
+			// Theorectially impossible
+			panic(fmt.Sprintf("value '%s' has invalid type, expected bool", val))
+		}
+		if valid != nil && !valid(bNew) {
+			bNew = j.Data("prev").(bool)
+			j.SetProp("checked", bNew)
+		}
+		*b = bNew
+		j.SetData("prev", bNew)
+	})
+	return j, nil
 }
 
 // Int takes a pointer to a int value and returns a JQuery object associated with it in the form of an input of
