@@ -54,6 +54,7 @@ func Slice(slicePtr interface{}, desc string) (jquery.JQuery, error) {
 // the initial value of the checkbox.
 func Bool(b *bool, desc string, valid Validator) (jquery.JQuery, error) {
 	j := jq("<input>").AddClass(ClassPrefix + "-bool")
+	j.SetAttr("type", "checkbox")
 	j.SetProp("checked", *b)
 	j.SetData("prev", *b)
 	j.Call(jquery.CHANGE, func(event jquery.Event) {
