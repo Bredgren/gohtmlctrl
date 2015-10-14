@@ -38,6 +38,7 @@ func RegisterValidator(name string, fn Validator) {
 //  * desc - A description of the struct field. Becomes the title attribute of the html tag.
 //  * min - Minimum value for a number
 //  * max - Maximum value for a number
+//  * step - How much the up and down buttons change a number by
 //  * choice - Comma separated list. This will created an html choice tag when used on a string type.
 //  * valid - Name of a registered validator.
 func Struct(structPtr interface{}, desc string) (jquery.JQuery, error) {
@@ -46,7 +47,8 @@ func Struct(structPtr interface{}, desc string) (jquery.JQuery, error) {
 
 // Slice takes a pointer to a slice and returns a JQuery object associated with it as a list tag. A non-nil error
 // is returned in the event the conversion fails. It includes buttons for adding and removing elements from the
-// slice. The slice's type must be among those supported by this package (or a pointer to one).
+// slice. The slice's type must be among those supported by this package (or a pointer to one). An error will be
+// returned if the slice's type is not supported.
 func Slice(slicePtr interface{}, desc string) (jquery.JQuery, error) {
 	t, v := reflect.TypeOf(slicePtr), reflect.ValueOf(slicePtr)
 	if t.Kind() != reflect.Ptr {
@@ -58,10 +60,18 @@ func Slice(slicePtr interface{}, desc string) (jquery.JQuery, error) {
 	sliceType, sliceValue := t.Elem(), v.Elem()
 	_, _ = sliceType, sliceValue
 
-	j := jq("<list>")
+	j := jq("<list>").AddClass(ClassPrefix + "-slice")
 	j.SetAttr("title", desc)
-	// Add '+' button
 	// Iterate over slice, adding each element along with '-' buttons
+	for i := 0; i < sliceValue.Len(); i++ {
+		elem := sliceValue.Index(i)
+		ji, e := convert(elem, "", 0, 0, 0, nil)
+		if e != nil {
+			return jq(), nil
+		}
+		j.Append(jq("<li>").Append(ji))
+	}
+	// Add '+' button
 
 	return j, nil
 }
@@ -120,4 +130,28 @@ func String(s *string, desc string, valid Validator) (jquery.JQuery, error) {
 // then A non-nil error is returned. If s is in options then it is used as the intial value.
 func Choice(s *string, options []string, valid Validator) (jquery.JQuery, error) {
 	return jq(), nil
+}
+
+func convert(val reflect.Value, desc string, min, max, step float64, valid Validator) (jquery.JQuery, error) {
+	kind := val.Type().Kind()
+	intf := val.Addr().Interface()
+	if val.Type().Kind() == reflect.Ptr {
+		kind = val.Type().Elem().Kind()
+		intf = val.Interface()
+	}
+	switch kind {
+	case reflect.Struct:
+		return jq(), fmt.Errorf("unimplemented type %s", val.Type().Kind())
+	case reflect.Slice:
+		return jq(), fmt.Errorf("unimplemented type %s", val.Type().Kind())
+	case reflect.Bool:
+		return Bool(intf.(*bool), desc, valid)
+	case reflect.Int:
+		return jq(), fmt.Errorf("unimplemented type %s", val.Type().Kind())
+	case reflect.Float64:
+		return jq(), fmt.Errorf("unimplemented type %s", val.Type().Kind())
+	case reflect.String:
+		return jq(), fmt.Errorf("unimplemented type %s", val.Type().Kind())
+	}
+	return jq(), fmt.Errorf("unsupported type %s", val.Type().Kind())
 }

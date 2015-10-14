@@ -27,7 +27,7 @@ func onBodyLoad() {
 	body := jq("body")
 	funcs := []func(jquery.JQuery){
 		testBool,
-		testSlice,
+		testSlices,
 		testStruct,
 	}
 	for _, fn := range funcs {
@@ -76,16 +76,45 @@ func testBool(body jquery.JQuery) {
 	log("end testBool")
 }
 
-func testSlice(body jquery.JQuery) {
-	log("begin testSlice")
-	cases := []struct {
-		name string
-		s    []bool
-	}{
-		{"s1", []bool{}},
-		{"s2", []bool{true, false}},
+type sliceCase interface {
+	name() string
+	slice() interface{}
+}
+
+type sliceBoolCase struct {
+	n string
+	s []bool
+}
+
+func (s sliceBoolCase) name() string {
+	return s.n
+}
+
+func (s sliceBoolCase) slice() interface{} {
+	return interface{}(&s.s)
+}
+
+type sliceBoolPtrCase struct {
+	n string
+	s []*bool
+}
+
+func (s sliceBoolPtrCase) name() string {
+	return s.n
+}
+
+func (s sliceBoolPtrCase) slice() interface{} {
+	return interface{}(&s.s)
+}
+
+func testSlices(body jquery.JQuery) {
+	log("begin testSlices")
+	log("begin testSlice bool")
+	cases := []sliceCase{
+		sliceBoolCase{"s1", []bool{}},
+		sliceBoolCase{"s2", []bool{true, false}},
 	}
-	_, e := htmlctrl.Slice(cases[0].s, "error")
+	_, e := htmlctrl.Slice(cases[0], "error")
 	if e == nil {
 		logError("expected error when passing non-ptr to slice")
 	}
@@ -93,20 +122,32 @@ func testSlice(body jquery.JQuery) {
 	if e == nil {
 		logError("expected error when passing ptr to non-slice")
 	}
+	testSlice(body, cases)
+
+	log("begin testSlice *bool")
+	b1, b2 := true, false
+	cases = []sliceCase{
+		sliceBoolPtrCase{"s1", []*bool{}},
+		sliceBoolPtrCase{"s2", []*bool{&b1, &b2}},
+	}
+	testSlice(body, cases)
+	log("end testSlices")
+}
+
+func testSlice(body jquery.JQuery, cases []sliceCase) {
 	slices := jq("<div>")
 	for _, c := range cases {
 		log(fmt.Sprintf("test case: %#v", c))
-		j, e := htmlctrl.Slice(&c.s, c.name)
+		j, e := htmlctrl.Slice(c.slice(), c.name())
 		if e != nil {
-			logError(fmt.Sprintf("%s: unexpected error: %s", c.name, e))
+			logError(fmt.Sprintf("%s: unexpected error: %s", c.name(), e))
 		}
-		if title := j.Attr("title"); title != c.name {
-			logError(fmt.Sprintf("%s: title is %s, expected %s", c.name, title, c.name))
+		if title := j.Attr("title"); title != c.name() {
+			logError(fmt.Sprintf("%s: title is %s, expected %s", c.name(), title, c.name()))
 		}
 		slices.Append(j)
 	}
 	body.Append(slices)
-	log("end testSlice")
 }
 
 func testStruct(body jquery.JQuery) {
