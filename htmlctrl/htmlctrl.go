@@ -4,6 +4,7 @@ package htmlctrl
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 
 	"github.com/gopherjs/jquery"
@@ -43,10 +44,26 @@ func Struct(structPtr interface{}, desc string) (jquery.JQuery, error) {
 	return jq(), nil
 }
 
-// Slice takes a pointer to a slice and returns a JQuery object associated with it. A non-nil error is returned
-// in the event the conversion fails. It includes buttons for adding and removing elements from the slice.
+// Slice takes a pointer to a slice and returns a JQuery object associated with it as a list tag. A non-nil error
+// is returned in the event the conversion fails. It includes buttons for adding and removing elements from the
+// slice. The slice's type must be among those supported by this package (or a pointer to one).
 func Slice(slicePtr interface{}, desc string) (jquery.JQuery, error) {
-	return jq(), nil
+	t, v := reflect.TypeOf(slicePtr), reflect.ValueOf(slicePtr)
+	if t.Kind() != reflect.Ptr {
+		return jq(), fmt.Errorf("slicePtr should be a pointer, got %s instead", t.Kind())
+	}
+	if t.Elem().Kind() != reflect.Slice {
+		return jq(), fmt.Errorf("slicePtr should be a pointer to slice, got pointer to %s instead", t.Elem().Kind())
+	}
+	sliceType, sliceValue := t.Elem(), v.Elem()
+	_, _ = sliceType, sliceValue
+
+	j := jq("<list>")
+	j.SetAttr("title", desc)
+	// Add '+' button
+	// Iterate over slice, adding each element along with '-' buttons
+
+	return j, nil
 }
 
 // Bool takes a pointer to a bool value and returns a JQuery object associated with it in the form of a checkbox.
@@ -55,6 +72,7 @@ func Slice(slicePtr interface{}, desc string) (jquery.JQuery, error) {
 func Bool(b *bool, desc string, valid Validator) (jquery.JQuery, error) {
 	j := jq("<input>").AddClass(ClassPrefix + "-bool")
 	j.SetAttr("type", "checkbox")
+	j.SetAttr("title", desc)
 	j.SetProp("checked", *b)
 	j.SetData("prev", *b)
 	j.Call(jquery.CHANGE, func(event jquery.Event) {
