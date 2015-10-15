@@ -32,15 +32,13 @@ func RegisterValidator(name string, fn Validator) {
 // All exported fields of the struct will recursively converted. Fields that whose types don't support conversion
 // are ignored. A type is supported if it has it's own conversion function in this package.
 //
-// The current value
-//
 // Struct tags recognized:
-//  * desc - A description of the struct field. Becomes the title attribute of the html tag.
-//  * min - Minimum value for a number
-//  * max - Maximum value for a number
-//  * step - How much the up and down buttons change a number by
-//  * choice - Comma separated list. This will created an html choice tag when used on a string type.
-//  * valid - Name of a registered validator.
+// * desc - A description of the struct field. Becomes the title attribute of the html tag.
+// * min - Minimum value for a number
+// * max - Maximum value for a number
+// * step - How much the up and down buttons change a number by
+// * choice - Comma separated list. This will created an html choice tag when used on a string type.
+// * valid - Name of a registered validator.
 func Struct(structPtr interface{}, desc string) (jquery.JQuery, error) {
 	return jq(), nil
 }
@@ -49,7 +47,7 @@ func Struct(structPtr interface{}, desc string) (jquery.JQuery, error) {
 // is returned in the event the conversion fails. It includes buttons for adding and removing elements from the
 // slice. The slice's type must be among those supported by this package (or a pointer to one). An error will be
 // returned if the slice's type is not supported.
-func Slice(slicePtr interface{}, desc string) (jquery.JQuery, error) {
+func Slice(slicePtr interface{}, desc string, valid Validator) (jquery.JQuery, error) {
 	t, v := reflect.TypeOf(slicePtr), reflect.ValueOf(slicePtr)
 	if t.Kind() != reflect.Ptr {
 		return jq(), fmt.Errorf("slicePtr should be a pointer, got %s instead", t.Kind())
@@ -65,7 +63,7 @@ func Slice(slicePtr interface{}, desc string) (jquery.JQuery, error) {
 	// Iterate over slice, adding each element along with '-' buttons
 	for i := 0; i < sliceValue.Len(); i++ {
 		elem := sliceValue.Index(i)
-		ji, e := convert(elem, "", 0, 0, 0, nil)
+		ji, e := convert(elem, "", 0, 0, 0, valid)
 		if e != nil {
 			return jq(), nil
 		}
