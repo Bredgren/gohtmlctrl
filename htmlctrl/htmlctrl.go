@@ -45,7 +45,7 @@ func Struct(structPtr interface{}, desc string) (jquery.JQuery, error) {
 
 // Slice takes a pointer to a slice and returns a JQuery object associated with it as a list tag. A non-nil error
 // is returned in the event the conversion fails. It includes buttons for adding and removing elements from the
-// slice. The slice's type must be among those supported by this package (or a pointer to one). An error will be
+// slice. The slice's type must be a pointer to one among those supported by this package. An error will be
 // returned if the slice's type is not supported.
 //
 // min, max, step, and valid will be applied if the slices element type supports it.
@@ -58,14 +58,21 @@ func Slice(slicePtr interface{}, desc string, min, max, step float64, valid Vali
 		return jq(), fmt.Errorf("slicePtr should be a pointer to slice, got pointer to %s instead", t.Elem().Kind())
 	}
 	sliceType, sliceValue := t.Elem(), v.Elem()
-	_ = sliceType
+	sliceElemType := sliceType.Elem()
+	if sliceElemType.Kind() != reflect.Ptr {
+		return jq(), fmt.Errorf("slice elements should be pointers, got %s instead", sliceElemType.Kind())
+	}
 
 	newLi := func(j, ji jquery.JQuery) jquery.JQuery {
 		print("new list item", &j)
 		li := jq("<li>").Append(ji)
 		delBtn := jq("<button>").SetText("-")
 		delBtn.Call(jquery.CLICK, func() {
+			i := li.Call("index").Get().Int()
 			li.Remove()
+			begin := sliceValue.Slice(0, i)
+			end := sliceValue.Slice(i+1, sliceValue.Len())
+			sliceValue.Set(reflect.AppendSlice(begin, end))
 		})
 		li.Append(delBtn)
 		return li
@@ -77,14 +84,21 @@ func Slice(slicePtr interface{}, desc string, min, max, step float64, valid Vali
 		elem := sliceValue.Index(i)
 		ji, e := convert(elem, "", min, max, step, valid)
 		if e != nil {
-			return jq(), nil
+			return jq(), fmt.Errorf("converting slice element %d (%s): %s", i, elem.Type().Kind(), e)
 		}
 		j.Append(newLi(j, ji))
 	}
 	addBtn := jq("<button>").SetText("+")
 	addBtn.Call(jquery.CLICK, func() {
-		fmt.Println("add")
-		// j.Append(newLi(ji))
+		newElem := reflect.New(sliceElemType.Elem())
+		sliceValue.Set(reflect.Append(sliceValue, newElem))
+		ji, e := convert(sliceValue.Index(sliceValue.Len()-1), "", min, max, step, valid)
+		if e != nil {
+			panic(fmt.Errorf("converting new slice element (%s): %s", sliceElemType.Kind(), e))
+		}
+		addBtn.Detach()
+		j.Append(newLi(j, ji))
+		j.Append(addBtn)
 	})
 	j.Append(addBtn)
 
