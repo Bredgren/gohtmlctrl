@@ -167,6 +167,10 @@ func testSlice(body jquery.JQuery, cases []sliceCase) {
 			logError(fmt.Sprintf("%s: title is %s, expected %s", c.name(), title, c.name()))
 		}
 		slices.Append(j)
+		c := c
+		slices.Append(jq("<button>").SetText("verify "+c.name()).Call(jquery.CLICK, func() {
+			log(c.name(), c.slice())
+		}))
 	}
 	body.Append(slices)
 }

@@ -58,9 +58,10 @@ func Slice(slicePtr interface{}, desc string, min, max, step float64, valid Vali
 		return jq(), fmt.Errorf("slicePtr should be a pointer to slice, got pointer to %s instead", t.Elem().Kind())
 	}
 	sliceType, sliceValue := t.Elem(), v.Elem()
-	_, _ = sliceType, sliceValue
+	_ = sliceType
 
-	newLi := func(ji jquery.JQuery) jquery.JQuery {
+	newLi := func(j, ji jquery.JQuery) jquery.JQuery {
+		print("new list item", &j)
 		li := jq("<li>").Append(ji)
 		delBtn := jq("<button>").SetText("-")
 		delBtn.Call(jquery.CLICK, func() {
@@ -69,6 +70,7 @@ func Slice(slicePtr interface{}, desc string, min, max, step float64, valid Vali
 		li.Append(delBtn)
 		return li
 	}
+
 	j := jq("<list>").AddClass(ClassPrefix + "-slice")
 	j.SetAttr("title", desc)
 	for i := 0; i < sliceValue.Len(); i++ {
@@ -77,7 +79,7 @@ func Slice(slicePtr interface{}, desc string, min, max, step float64, valid Vali
 		if e != nil {
 			return jq(), nil
 		}
-		j.Append(newLi(ji))
+		j.Append(newLi(j, ji))
 	}
 	addBtn := jq("<button>").SetText("+")
 	addBtn.Call(jquery.CLICK, func() {
