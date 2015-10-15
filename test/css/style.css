@@ -2,3 +2,8 @@
 .go-bool {
     margin-left: 10px;
 }
+
+.go-slice {
+		display: block;
+		margin-bottom: 10px;
+}

@@ -79,6 +79,8 @@ func testBool(body jquery.JQuery) {
 type sliceCase interface {
 	name() string
 	slice() interface{}
+	mms() (min, max, step float64)
+	valid() htmlctrl.Validator
 }
 
 type sliceBoolCase struct {
@@ -94,6 +96,14 @@ func (s sliceBoolCase) slice() interface{} {
 	return interface{}(&s.s)
 }
 
+func (s sliceBoolCase) mms() (min, max, step float64) {
+	return 0, 0, 0
+}
+
+func (s sliceBoolCase) valid() htmlctrl.Validator {
+	return nil
+}
+
 type sliceBoolPtrCase struct {
 	n string
 	s []*bool
@@ -107,6 +117,17 @@ func (s sliceBoolPtrCase) slice() interface{} {
 	return interface{}(&s.s)
 }
 
+func (s sliceBoolPtrCase) mms() (min, max, step float64) {
+	return 0, 0, 0
+}
+
+func (s sliceBoolPtrCase) valid() htmlctrl.Validator {
+	return func(b interface{}) bool {
+		log("bool is locked at true")
+		return b.(bool)
+	}
+}
+
 func testSlices(body jquery.JQuery) {
 	log("begin testSlices")
 	log("begin testSlice bool")
@@ -114,11 +135,11 @@ func testSlices(body jquery.JQuery) {
 		sliceBoolCase{"s1", []bool{}},
 		sliceBoolCase{"s2", []bool{true, false}},
 	}
-	_, e := htmlctrl.Slice(cases[0], "error")
+	_, e := htmlctrl.Slice(cases[0], "error", 0, 0, 0, nil)
 	if e == nil {
 		logError("expected error when passing non-ptr to slice")
 	}
-	_, e = htmlctrl.Slice(&e, "error")
+	_, e = htmlctrl.Slice(&e, "error", 0, 0, 0, nil)
 	if e == nil {
 		logError("expected error when passing ptr to non-slice")
 	}
@@ -127,8 +148,7 @@ func testSlices(body jquery.JQuery) {
 	log("begin testSlice *bool")
 	b1, b2 := true, false
 	cases = []sliceCase{
-		sliceBoolPtrCase{"s1", []*bool{}},
-		sliceBoolPtrCase{"s2", []*bool{&b1, &b2}},
+		sliceBoolPtrCase{"s1", []*bool{&b1, &b2}},
 	}
 	testSlice(body, cases)
 	log("end testSlices")
@@ -138,7 +158,8 @@ func testSlice(body jquery.JQuery, cases []sliceCase) {
 	slices := jq("<div>")
 	for _, c := range cases {
 		log(fmt.Sprintf("test case: %#v", c))
-		j, e := htmlctrl.Slice(c.slice(), c.name())
+		min, max, step := c.mms()
+		j, e := htmlctrl.Slice(c.slice(), c.name(), min, max, step, c.valid())
 		if e != nil {
 			logError(fmt.Sprintf("%s: unexpected error: %s", c.name(), e))
 		}

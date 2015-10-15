@@ -33,7 +33,6 @@ func RegisterValidator(name string, fn Validator) {
 // are ignored. A type is supported if it has it's own conversion function in this package.
 //
 // Struct tags recognized
-//
 //  desc - A description of the struct field. Becomes the title attribute of the html tag.
 //  min - Minimum value for a number
 //  max - Maximum value for a number
@@ -48,7 +47,9 @@ func Struct(structPtr interface{}, desc string) (jquery.JQuery, error) {
 // is returned in the event the conversion fails. It includes buttons for adding and removing elements from the
 // slice. The slice's type must be among those supported by this package (or a pointer to one). An error will be
 // returned if the slice's type is not supported.
-func Slice(slicePtr interface{}, desc string, valid Validator) (jquery.JQuery, error) {
+//
+// min, max, step, and valid will be applied if the slices element type supports it.
+func Slice(slicePtr interface{}, desc string, min, max, step float64, valid Validator) (jquery.JQuery, error) {
 	t, v := reflect.TypeOf(slicePtr), reflect.ValueOf(slicePtr)
 	if t.Kind() != reflect.Ptr {
 		return jq(), fmt.Errorf("slicePtr should be a pointer, got %s instead", t.Kind())
@@ -59,18 +60,31 @@ func Slice(slicePtr interface{}, desc string, valid Validator) (jquery.JQuery, e
 	sliceType, sliceValue := t.Elem(), v.Elem()
 	_, _ = sliceType, sliceValue
 
+	newLi := func(ji jquery.JQuery) jquery.JQuery {
+		li := jq("<li>").Append(ji)
+		delBtn := jq("<button>").SetText("-")
+		delBtn.Call(jquery.CLICK, func() {
+			li.Remove()
+		})
+		li.Append(delBtn)
+		return li
+	}
 	j := jq("<list>").AddClass(ClassPrefix + "-slice")
 	j.SetAttr("title", desc)
-	// Iterate over slice, adding each element along with '-' buttons
 	for i := 0; i < sliceValue.Len(); i++ {
 		elem := sliceValue.Index(i)
-		ji, e := convert(elem, "", 0, 0, 0, valid)
+		ji, e := convert(elem, "", min, max, step, valid)
 		if e != nil {
 			return jq(), nil
 		}
-		j.Append(jq("<li>").Append(ji))
+		j.Append(newLi(ji))
 	}
-	// Add '+' button
+	addBtn := jq("<button>").SetText("+")
+	addBtn.Call(jquery.CLICK, func() {
+		fmt.Println("add")
+		// j.Append(newLi(ji))
+	})
+	j.Append(addBtn)
 
 	return j, nil
 }
