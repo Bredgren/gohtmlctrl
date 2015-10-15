@@ -32,13 +32,17 @@ func RegisterValidator(name string, fn Validator) {
 // All exported fields of the struct will recursively converted. Fields that whose types don't support conversion
 // are ignored. A type is supported if it has it's own conversion function in this package.
 //
-// Struct tags recognized:
+// Struct tags recognized
 //  - desc - A description of the struct field. Becomes the title attribute of the html tag.
 //  - min - Minimum value for a number
 //  - max - Maximum value for a number
 //  - step - How much the up and down buttons change a number by
 //  - choice - Comma separated list. This will created an html choice tag when used on a string type.
 //  - valid - Name of a registered validator.
+//
+// Test
+// - a
+// - b
 func Struct(structPtr interface{}, desc string) (jquery.JQuery, error) {
 	return jq(), nil
 }
