@@ -1,6 +1,18 @@
 
+.bools {
+		margin: 10px;
+}
+
+.ints {
+		margin: 10px;
+}
+
 .go-bool {
     margin-left: 10px;
+}
+
+.go-int {
+		margin-left: 10px;
 }
 
 .go-slice {

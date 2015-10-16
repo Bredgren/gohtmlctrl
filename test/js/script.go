@@ -31,6 +31,7 @@ func onBodyLoad() {
 	body := jq("body")
 	funcs := []func(jquery.JQuery){
 		testBool,
+		testInt,
 		testSlices,
 		testStruct,
 	}
@@ -57,7 +58,7 @@ func testBool(body jquery.JQuery) {
 			return !b
 		})},
 	}
-	bools := jq("<div>")
+	bools := jq("<div>").AddClass("bools")
 	for _, c := range cases {
 		logInfo(fmt.Sprintf("test case: %#v", c))
 		j, e := htmlctrl.Bool(&c.b, c.name, c.valid)
@@ -78,6 +79,42 @@ func testBool(body jquery.JQuery) {
 	}
 	body.Append(bools)
 	logInfo("end testBool")
+}
+
+func testInt(body jquery.JQuery) {
+	logInfo("begin testInt")
+	cases := []struct {
+		name           string
+		i              int
+		min, max, step int
+		valid          htmlctrl.Validator
+	}{
+		{"i1", 0, -10, 10, 3, nil},
+		{"i2", 2, -100, 100, 1, htmlctrl.ValidateInt(func(i int) bool {
+			if i == 5 {
+				log("i3 can't be 5")
+			}
+			return i != 5
+		})},
+	}
+	ints := jq("<div>").AddClass("ints")
+	for _, c := range cases {
+		logInfo(fmt.Sprintf("test case: %#v", c))
+		j, e := htmlctrl.Int(&c.i, c.name, c.min, c.max, c.step, c.valid)
+		if e != nil {
+			logError(fmt.Sprintf("%s: unexpected error: %s", c.name, e))
+		}
+		if title := j.Attr("title"); title != c.name {
+			logError(fmt.Sprintf("%s: title is %s, expected %s", c.name, title, c.name))
+		}
+		ints.Append(j)
+		c := &c
+		ints.Append(jq("<button>").SetText("verify "+c.name).Call(jquery.CLICK, func() {
+			log(c.name, c.i)
+		}))
+	}
+	body.Append(ints)
+	logInfo("end testInt")
 }
 
 type sliceCase interface {

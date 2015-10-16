@@ -224,8 +224,35 @@ func Bool(b *bool, desc string, valid Validator) (jquery.JQuery, error) {
 // number type. Attempt to fill in a non-int value will result in it being truncated to an integer. A non-nil
 // error is returned in the event the conversion fails. The current value of the int will be used as the initial
 // value of the input.
-func Int(i *int, desc string, min, max int, valid Validator) (jquery.JQuery, error) {
-	return jq(), nil
+func Int(i *int, desc string, min, max, step int, valid Validator) (jquery.JQuery, error) {
+	j := jq("<input>").AddClass(ClassPrefix + "-int")
+	j.SetAttr("type", "number")
+	j.SetAttr("min", min)
+	j.SetAttr("max", max)
+	j.SetAttr("step", step)
+	j.SetAttr("value", *i)
+	j.SetData("prev", *i)
+	j.Call(jquery.CHANGE, func(event jquery.Event) {
+		val := event.Target.Get("value").String()
+		newI, e := strconv.Atoi(val)
+		if e != nil {
+			f, e := strconv.ParseFloat(val, 64)
+			if e != nil {
+				panic(fmt.Errorf("value '%s' has invalid type, expected a number", val))
+			}
+			// Truncate to int
+			newI = int(f)
+			j.SetVal(newI)
+		}
+		// Need to check for min and max ourselves because html min and max are easy to get around
+		if (valid != nil && !valid.Validate(newI)) || (newI < min || newI > max) {
+			newI = int(j.Data("prev").(float64))
+			j.SetVal(newI)
+		}
+		*i = newI
+		j.SetData("prev", newI)
+	})
+	return j, nil
 }
 
 // Float64 takes a pointer to a float64 value and returns a JQuery object associated with it in the form of an
