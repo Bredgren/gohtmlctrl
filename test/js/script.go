@@ -44,18 +44,18 @@ func testBool(body jquery.JQuery) {
 	cases := []struct {
 		name  string
 		b     bool
-		valid func(interface{}) bool
+		valid htmlctrl.Validator
 	}{
 		{"b1", false, nil},
 		{"b2", true, nil},
-		{"b3", true, func(b interface{}) bool {
+		{"b3", true, htmlctrl.ValidateBool(func(b bool) bool {
 			log("b3 is locked at true")
-			return b.(bool)
-		}},
-		{"b4", false, func(b interface{}) bool {
+			return b
+		})},
+		{"b4", false, htmlctrl.ValidateBool(func(b bool) bool {
 			log("b4 is locked at false")
-			return !b.(bool)
-		}},
+			return !b
+		})},
 	}
 	bools := jq("<div>")
 	for _, c := range cases {
@@ -160,10 +160,10 @@ func testSlices(body jquery.JQuery) {
 	logInfo("begin testSlice *bool")
 	b1, b2 := true, false
 	cases = []sliceCase{
-		&sliceBoolPtrCase{"*bool1", []*bool{&b1, &b2}, func(b interface{}) bool {
+		&sliceBoolPtrCase{"*bool1", []*bool{&b1, &b2}, htmlctrl.ValidateBool(func(b bool) bool {
 			log("bool is locked at true")
-			return b.(bool)
-		}, false},
+			return b
+		}), false},
 		&sliceBoolPtrCase{"*bool2", []*bool{}, nil, false},
 	}
 	testSlice(body, cases)

@@ -13,13 +13,46 @@ import (
 // ClassPrefix is used to prefix the CSS classes. They will be of the form ClassPrefix-GoType
 var ClassPrefix = "go"
 
+var (
+	// SliceAddText is used to fill the add button for a slice
+	SliceAddText = "+"
+	// SliceDelText is used to fill the delete button for a slice
+	SliceDelText = "-"
+)
+
 var jq = jquery.NewJQuery
 
 var validators = make(map[string]Validator)
 
-// Validator is a function used to validate changes made via html objects. It is given the requested new value
+// Validator is used to validate changes made via html objects. The Valid function is given the requested new value
 // and should return true only when it is an acceptable value. If it returns false then the change is reverted
-type Validator func(interface{}) bool
+type Validator interface {
+	Validate(interface{}) bool
+}
+
+// ValidatorFunc describes an abitrary function that implements the Validator interface.
+type ValidatorFunc func(interface{}) bool
+
+// Validate implements the Validator interface
+func (v ValidatorFunc) Validate(i interface{}) bool {
+	return v(i)
+}
+
+// ValidateBool is a function that validates bool types.
+type ValidateBool func(bool) bool
+
+// Validate implements the Validator interface but type asserts that the argument is a bool.
+func (v ValidateBool) Validate(i interface{}) bool {
+	return v(i.(bool))
+}
+
+// ValidateInt is a function that validates int types.
+type ValidateInt func(int) bool
+
+// Validate implements the Validator interface but type asserts that the argument is an int.
+func (v ValidateInt) Validate(i interface{}) bool {
+	return v(i.(int))
+}
 
 // RegisterValidator associates a name with the validator function so that it may be referenced in a struct tag.
 func RegisterValidator(name string, fn Validator) {
@@ -66,7 +99,7 @@ func Slice(slicePtr interface{}, desc string, min, max, step float64, valid Vali
 	newLi := func(j, ji jquery.JQuery) jquery.JQuery {
 		print("new list item", &j)
 		li := jq("<li>").Append(ji)
-		delBtn := jq("<button>").SetText("-")
+		delBtn := jq("<button>").SetText(SliceDelText)
 		delBtn.Call(jquery.CLICK, func() {
 			i := li.Call("index").Get().Int()
 			li.Remove()
@@ -88,7 +121,7 @@ func Slice(slicePtr interface{}, desc string, min, max, step float64, valid Vali
 		}
 		j.Append(newLi(j, ji))
 	}
-	addBtn := jq("<button>").SetText("+")
+	addBtn := jq("<button>").SetText(SliceAddText)
 	addBtn.Call(jquery.CLICK, func() {
 		newElem := reflect.New(sliceElemType.Elem())
 		sliceValue.Set(reflect.Append(sliceValue, newElem))
@@ -121,7 +154,7 @@ func Bool(b *bool, desc string, valid Validator) (jquery.JQuery, error) {
 			// Theorectially impossible
 			panic(fmt.Sprintf("value '%s' has invalid type, expected bool", val))
 		}
-		if valid != nil && !valid(bNew) {
+		if valid != nil && !valid.Validate(bNew) {
 			bNew = j.Data("prev").(bool)
 			j.SetProp("checked", bNew)
 		}
