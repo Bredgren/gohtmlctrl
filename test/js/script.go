@@ -160,11 +160,11 @@ func testSlices(body jquery.JQuery) {
 	logInfo("begin testSlice *bool")
 	b1, b2 := true, false
 	cases = []sliceCase{
-		&sliceBoolPtrCase{"*bool1", []*bool{&b1, &b2}, htmlctrl.ValidateBool(func(b bool) bool {
+		&sliceBoolPtrCase{"[]*bool1", []*bool{&b1, &b2}, htmlctrl.ValidateBool(func(b bool) bool {
 			log("bool is locked at true")
 			return b
 		}), false},
-		&sliceBoolPtrCase{"*bool2", []*bool{}, nil, false},
+		&sliceBoolPtrCase{"[]*bool2", []*bool{}, nil, false},
 	}
 	testSlice(body, cases)
 	logInfo("end testSlices")
@@ -197,5 +197,39 @@ func testSlice(body jquery.JQuery, cases []sliceCase) {
 
 func testStruct(body jquery.JQuery) {
 	logInfo("begin testStruct")
+	Bptr := true
+	struct1 := struct {
+		b    bool
+		B    bool  `desc:"a bool"`
+		Bptr *bool `desc:"bool ptr"`
+		Bt   bool  `desc:"Always true" valid:"BoolTrue"`
+	}{
+		false,
+		false,
+		&Bptr,
+		true,
+	}
+	htmlctrl.RegisterValidator("BoolTrue", htmlctrl.ValidateBool(func(b bool) bool {
+		log("bool is locked at true")
+		return b
+	}))
+	_, e := htmlctrl.Struct(struct1, "error")
+	if e == nil {
+		logError("expected error when passing non-ptr")
+	}
+	_, e = htmlctrl.Struct(&e, "error")
+	if e == nil {
+		logError("expected error when passing ptr to non-slice")
+	}
+
+	j, e := htmlctrl.Struct(&struct1, "struct1")
+	if e != nil {
+		logError(fmt.Sprintf("%s: unexpected error: %s", "struct1", e))
+	}
+	body.Append(j)
+	body.Append(jq("<button>").SetText("verify struct1").Call(jquery.CLICK, func() {
+		log("struct1", struct1)
+	}))
+
 	logInfo("end testStruct")
 }

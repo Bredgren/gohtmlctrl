@@ -5,5 +5,17 @@
 
 .go-slice {
 		display: block;
-		margin-bottom: 10px;
+		margin: 10px;
+		padding: 5px;
+		border: 1px solid black;
+}
+
+.go-struct {
+		margin: 10px;
+		padding: 5px;
+		border: 1px solid black;
+}
+
+.go-struct-field {
+		border-bottom: 1px solid grey;
 }

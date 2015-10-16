@@ -4,6 +4,7 @@ package htmlctrl
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"strconv"
 
@@ -73,7 +74,62 @@ func RegisterValidator(name string, fn Validator) {
 //  choice - Comma separated list. This will created an html choice tag when used on a string type.
 //  valid - Name of a registered validator.
 func Struct(structPtr interface{}, desc string) (jquery.JQuery, error) {
-	return jq(), nil
+	t, v := reflect.TypeOf(structPtr), reflect.ValueOf(structPtr)
+	if t.Kind() != reflect.Ptr {
+		return jq(), fmt.Errorf("structPtr should be a pointer, got %s instead", t.Kind())
+	}
+	if t.Elem().Kind() != reflect.Struct {
+		return jq(), fmt.Errorf("structPtr should be a pointer to struct, got pointer to %s instead", t.Elem().Kind())
+	}
+	structType, structValue := t.Elem(), v.Elem()
+
+	j := jq("<div>").AddClass(ClassPrefix + "-struct")
+	for i := 0; i < structType.NumField(); i++ {
+		fieldType := structType.Field(i)
+		// Ignore unexported fields
+		if fieldType.PkgPath != "" {
+			continue
+		}
+		fieldValue := structValue.Field(i)
+		tag := fieldType.Tag
+		validName := tag.Get("valid")
+		valid, ok := validators[validName]
+		if validName != "" && !ok {
+			return jq(), fmt.Errorf("unregistered validator '%s'", validName)
+		}
+		min, e := strconv.ParseFloat(tag.Get("min"), 64)
+		if e != nil {
+			if tag.Get("min") != "" {
+				return jq(), fmt.Errorf("min as value '%s' expected a number", tag.Get("min"))
+			}
+			min = math.NaN()
+		}
+		max, e := strconv.ParseFloat(tag.Get("max"), 64)
+		if e != nil {
+			if tag.Get("max") != "" {
+				return jq(), fmt.Errorf("max as value '%s' expected a number", tag.Get("max"))
+			}
+			max = math.NaN()
+		}
+		step, e := strconv.ParseFloat(tag.Get("step"), 64)
+		if e != nil {
+			if tag.Get("step") != "" {
+				return jq(), fmt.Errorf("step as value '%s' expected a number", tag.Get("step"))
+			}
+			step = math.NaN()
+		}
+
+		field, e := convert(fieldValue, tag.Get("desc"), min, max, step, valid)
+		if e != nil {
+			return jq(), fmt.Errorf("converting struct field %s (%s): %s", fieldType.Name, fieldType.Type.Kind(), e)
+		}
+		jf := jq("<div>").AddClass(ClassPrefix + "-struct-field")
+		jf.Append(jq("<label>").SetText(fieldType.Name))
+		jf.Append(field)
+		j.Append(jf)
+		fmt.Println(fieldType, fieldValue, tag)
+	}
+	return j, nil
 }
 
 // Slice takes a pointer to a slice and returns a JQuery object associated with it as a list tag. A non-nil error
