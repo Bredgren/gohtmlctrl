@@ -60,6 +60,15 @@ func RegisterValidator(name string, fn Validator) {
 	validators[name] = fn
 }
 
+// type Options struct {
+// 	Desc   string
+// 	Min    float64
+// 	Max    float64
+// 	Step   float64
+// 	Choice string
+// 	Valid  Validator
+// }
+
 // Struct takes a pointer to a struct and returns a JQuery object associated with it. A non-nil error is returned
 // in the event the conversion fails.
 //
@@ -84,6 +93,7 @@ func Struct(structPtr interface{}, desc string) (jquery.JQuery, error) {
 	structType, structValue := t.Elem(), v.Elem()
 
 	j := jq("<div>").AddClass(ClassPrefix + "-struct")
+	j.SetAttr("title", desc)
 	for i := 0; i < structType.NumField(); i++ {
 		fieldType := structType.Field(i)
 		// Ignore unexported fields
@@ -153,7 +163,6 @@ func Slice(slicePtr interface{}, desc string, min, max, step float64, valid Vali
 	}
 
 	newLi := func(j, ji jquery.JQuery) jquery.JQuery {
-		print("new list item", &j)
 		li := jq("<li>").Append(ji)
 		delBtn := jq("<button>").SetText(SliceDelText)
 		delBtn.Call(jquery.CLICK, func() {
@@ -292,7 +301,7 @@ func convert(val reflect.Value, desc string, min, max, step float64, valid Valid
 	case reflect.Bool:
 		return Bool(intf.(*bool), desc, valid)
 	case reflect.Int:
-		return jq(), fmt.Errorf("unimplemented type %s", val.Type().Kind())
+		return Int(intf.(*int), desc, int(min), int(max), int(step), valid)
 	case reflect.Float64:
 		return jq(), fmt.Errorf("unimplemented type %s", val.Type().Kind())
 	case reflect.String:

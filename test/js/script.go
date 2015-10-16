@@ -178,6 +178,34 @@ func (s *sliceBoolPtrCase) error() bool {
 	return s.e
 }
 
+type sliceIntPtrCase struct {
+	n              string
+	s              []*int
+	min, max, step int
+	v              htmlctrl.Validator
+	e              bool
+}
+
+func (s *sliceIntPtrCase) name() string {
+	return s.n
+}
+
+func (s *sliceIntPtrCase) slice() interface{} {
+	return interface{}(&s.s)
+}
+
+func (s *sliceIntPtrCase) mms() (min, max, step float64) {
+	return float64(s.min), float64(s.max), float64(s.step)
+}
+
+func (s *sliceIntPtrCase) valid() htmlctrl.Validator {
+	return s.v
+}
+
+func (s *sliceIntPtrCase) error() bool {
+	return s.e
+}
+
 func testSlices(body jquery.JQuery) {
 	logInfo("begin testSlices")
 	logInfo("begin testSlice bool")
@@ -204,6 +232,21 @@ func testSlices(body jquery.JQuery) {
 		&sliceBoolPtrCase{"[]*bool2", []*bool{}, nil, false},
 	}
 	testSlice(body, cases)
+
+	logInfo("begin testSlice *int")
+	i1, i2 := 1, 22
+	cases = []sliceCase{
+		&sliceIntPtrCase{"[]*int1", []*int{&i1, &i2}, 0, 50, 2, htmlctrl.ValidateInt(func(i int) bool {
+			allowed := i != 3 && i != 5 && i != 7
+			if !allowed {
+				log("int may not be 3, 5, or 7")
+			}
+			return allowed
+		}), false},
+		&sliceIntPtrCase{"[]*int2", []*int{}, 0, 0, 1, nil, false},
+	}
+	testSlice(body, cases)
+
 	logInfo("end testSlices")
 }
 
@@ -235,20 +278,29 @@ func testSlice(body jquery.JQuery, cases []sliceCase) {
 func testStruct(body jquery.JQuery) {
 	logInfo("begin testStruct")
 	Bptr := true
+	Iptr := 11
 	struct1 := struct {
 		b    bool
 		B    bool  `desc:"a bool"`
 		Bptr *bool `desc:"bool ptr"`
 		Bt   bool  `desc:"Always true" valid:"BoolTrue"`
+		I    int   `desc:"an int"`
+		Iptr *int  `desc:"int ptr"`
+		Ilim int   `desc:"limited int" min:"1" max:"10" step:"2" valid:"IntNot5"`
 	}{
-		false,
-		false,
-		&Bptr,
-		true,
+		false, false, &Bptr, true,
+		2, &Iptr, 1,
 	}
 	htmlctrl.RegisterValidator("BoolTrue", htmlctrl.ValidateBool(func(b bool) bool {
 		log("bool is locked at true")
 		return b
+	}))
+	htmlctrl.RegisterValidator("IntNot5", htmlctrl.ValidateInt(func(i int) bool {
+		not5 := i != 5
+		if !not5 {
+			log("int can't be 5")
+		}
+		return not5
 	}))
 	_, e := htmlctrl.Struct(struct1, "error")
 	if e == nil {
@@ -262,6 +314,9 @@ func testStruct(body jquery.JQuery) {
 	j, e := htmlctrl.Struct(&struct1, "struct1")
 	if e != nil {
 		logError(fmt.Sprintf("%s: unexpected error: %s", "struct1", e))
+	}
+	if title := j.Attr("title"); title != "struct1" {
+		logError(fmt.Sprintf("%s: title is %s, expected %s", "struct1", title, "struct1"))
 	}
 	body.Append(j)
 	body.Append(jq("<button>").SetText("verify struct1").Call(jquery.CLICK, func() {
