@@ -421,6 +421,52 @@ func (s *sliceStringPtrCase) valid() htmlctrl.Validator {
 	return s.v
 }
 
+type sliceIntSliceCase struct {
+	n              string
+	s              [][]int
+	min, max, step int
+	v              htmlctrl.Validator
+}
+
+func (s *sliceIntSliceCase) name() string {
+	return s.n
+}
+
+func (s *sliceIntSliceCase) slice() interface{} {
+	return interface{}(&s.s)
+}
+
+func (s *sliceIntSliceCase) mms() (min, max, step float64) {
+	return float64(s.min), float64(s.max), float64(s.step)
+}
+
+func (s *sliceIntSliceCase) valid() htmlctrl.Validator {
+	return s.v
+}
+
+type sliceIntPtrSliceCase struct {
+	n              string
+	s              []*[]*int
+	min, max, step int
+	v              htmlctrl.Validator
+}
+
+func (s *sliceIntPtrSliceCase) name() string {
+	return s.n
+}
+
+func (s *sliceIntPtrSliceCase) slice() interface{} {
+	return interface{}(&s.s)
+}
+
+func (s *sliceIntPtrSliceCase) mms() (min, max, step float64) {
+	return float64(s.min), float64(s.max), float64(s.step)
+}
+
+func (s *sliceIntPtrSliceCase) valid() htmlctrl.Validator {
+	return s.v
+}
+
 func testSlices(body jquery.JQuery) {
 	logInfo("begin testSlices")
 	logInfo("begin testSlice bool")
@@ -531,6 +577,33 @@ func testSlices(body jquery.JQuery) {
 				return allowed
 			})},
 		&sliceStringPtrCase{"[]*string2", []*string{}, nil},
+	}
+	testSlice(body, cases)
+
+	logInfo("begin testSlice []int")
+	cases = []sliceCase{
+		&sliceIntSliceCase{"[][]int1", [][]int{{2, 4}, {8, 16}}, 0, 50, 2, htmlctrl.ValidateInt(func(i int) bool {
+			allowed := i != 3 && i != 5 && i != 7
+			if !allowed {
+				log("int may not be 3, 5, or 7")
+			}
+			return allowed
+		})},
+		&sliceIntSliceCase{"[][]int2", [][]int{}, 0, 0, 1, nil},
+	}
+	testSlice(body, cases)
+
+	logInfo("begin testSlice *[]*int")
+	is1, is2 := []*int{&i1, &i2}, []*int{}
+	cases = []sliceCase{
+		&sliceIntPtrSliceCase{"[]*[]*int1", []*[]*int{&is1, &is2}, 0, 50, 2, htmlctrl.ValidateInt(func(i int) bool {
+			allowed := i != 3 && i != 5 && i != 7
+			if !allowed {
+				log("int may not be 3, 5, or 7")
+			}
+			return allowed
+		})},
+		&sliceIntPtrSliceCase{"[]*[]*int2", []*[]*int{}, 0, 0, 1, nil},
 	}
 	testSlice(body, cases)
 

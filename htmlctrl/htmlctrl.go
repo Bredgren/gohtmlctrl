@@ -359,8 +359,7 @@ func convert(val reflect.Value, desc, choices string, min, max, step float64, va
 		// return Struct(intf, desc)
 		return jq(), fmt.Errorf("unimplemented type %s", val.Type().Kind())
 	case reflect.Slice:
-		// return Slice(intf, desc, min, max, step, valid)
-		return jq(), fmt.Errorf("unimplemented type %s", val.Type().Kind())
+		return Slice(intf, desc, min, max, step, valid)
 	case reflect.Bool:
 		return Bool(intf.(*bool), desc, valid)
 	case reflect.Int:
