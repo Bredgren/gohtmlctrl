@@ -55,6 +55,14 @@ func (v ValidateInt) Validate(i interface{}) bool {
 	return v(i.(int))
 }
 
+// ValidateFloat64 is a function that validates float64 types.
+type ValidateFloat64 func(float64) bool
+
+// Validate implements the Validator interface but type asserts that the argument is an float.
+func (v ValidateFloat64) Validate(i interface{}) bool {
+	return v(i.(float64))
+}
+
 // RegisterValidator associates a name with the validator function so that it may be referenced in a struct tag.
 func RegisterValidator(name string, fn Validator) {
 	validators[name] = fn
@@ -289,8 +297,41 @@ func Int(i *int, desc string, min, max, step float64, valid Validator) (jquery.J
 // Float64 takes a pointer to a float64 value and returns a JQuery object associated with it in the form of an
 // input of number type. A non-nil error is returned in the event the conversion fails. The current value of the
 // float64 will be used as the initial value of the input.
-func Float64(f *float64, desc string, min, max float64, valid Validator) (jquery.JQuery, error) {
-	return jq(), nil
+func Float64(f *float64, desc string, min, max, step float64, valid Validator) (jquery.JQuery, error) {
+	j := jq("<input>").AddClass(ClassPrefix + "-float64")
+	j.SetAttr("title", desc)
+	j.SetAttr("type", "number")
+	if !math.IsNaN(min) {
+		j.SetAttr("min", min)
+	}
+	if !math.IsNaN(max) {
+		j.SetAttr("max", max)
+	}
+	if !math.IsNaN(step) {
+		j.SetAttr("step", step)
+	}
+	j.SetAttr("value", *f)
+	j.SetData("prev", *f)
+	j.Call(jquery.CHANGE, func(event jquery.Event) {
+		val := event.Target.Get("value").String()
+		newF, e := strconv.ParseFloat(val, 64)
+		if e != nil {
+			panic(fmt.Errorf("value '%s' has invalid type, expected a number", val))
+		}
+		j.SetVal(newF)
+		// Need to check for min and max ourselves because html min and max are easy to get around
+		isValid := valid == nil || valid.Validate(newF)
+		isToLow := !math.IsNaN(min) && newF < min
+		isToHigh := !math.IsNaN(max) && newF > max
+		if !isValid || isToLow || isToHigh {
+			fmt.Println(isValid, isToLow, isToHigh)
+			newF = j.Data("prev").(float64)
+			j.SetVal(newF)
+		}
+		*f = newF
+		j.SetData("prev", newF)
+	})
+	return j, nil
 }
 
 // String takes a pointer to a string value and returns a JQuery object associated with it in the form of an
@@ -325,7 +366,7 @@ func convert(val reflect.Value, desc string, min, max, step float64, valid Valid
 	case reflect.Int:
 		return Int(intf.(*int), desc, min, max, step, valid)
 	case reflect.Float64:
-		return jq(), fmt.Errorf("unimplemented type %s", val.Type().Kind())
+		return Float64(intf.(*float64), desc, min, max, step, valid)
 	case reflect.String:
 		return jq(), fmt.Errorf("unimplemented type %s", val.Type().Kind())
 	}

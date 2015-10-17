@@ -7,11 +7,19 @@
 		margin: 10px;
 }
 
+.float64s {
+		margin: 10px;
+}
+
 .go-bool {
     margin-left: 10px;
 }
 
 .go-int {
+		margin-left: 10px;
+}
+
+.go-float64 {
 		margin-left: 10px;
 }
 

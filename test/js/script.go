@@ -33,6 +33,7 @@ func onBodyLoad() {
 	funcs := []func(jquery.JQuery){
 		testBool,
 		testInt,
+		testFloat64,
 		testSlices,
 		testStruct,
 	}
@@ -117,6 +118,43 @@ func testInt(body jquery.JQuery) {
 	}
 	body.Append(ints)
 	logInfo("end testInt")
+}
+
+func testFloat64(body jquery.JQuery) {
+	logInfo("begin testFloat64")
+	cases := []struct {
+		name           string
+		f              float64
+		min, max, step float64
+		valid          htmlctrl.Validator
+	}{
+		{"f1", 0.5, -10, 10, 1.5, nil},
+		{"f2", 2.1, -100, 100, 1, htmlctrl.ValidateFloat64(func(f float64) bool {
+			if f == 5.5 {
+				log("f3 can't be 5.5")
+			}
+			return f != 5.5
+		})},
+		{"f3", 0, math.NaN(), math.NaN(), math.NaN(), nil},
+	}
+	float64s := jq("<div>").AddClass("float64s")
+	for _, c := range cases {
+		logInfo(fmt.Sprintf("test case: %#v", c))
+		j, e := htmlctrl.Float64(&c.f, c.name, c.min, c.max, c.step, c.valid)
+		if e != nil {
+			logError(fmt.Sprintf("%s: unexpected error: %s", c.name, e))
+		}
+		if title := j.Attr("title"); title != c.name {
+			logError(fmt.Sprintf("%s: title is %s, expected %s", c.name, title, c.name))
+		}
+		float64s.Append(j)
+		c := &c
+		float64s.Append(jq("<button>").SetText("verify "+c.name).Call(jquery.CLICK, func() {
+			log(c.name, c.f)
+		}))
+	}
+	body.Append(float64s)
+	logInfo("end testFloat64")
 }
 
 type sliceCase interface {
@@ -215,6 +253,52 @@ func (s *sliceIntPtrCase) valid() htmlctrl.Validator {
 	return s.v
 }
 
+type sliceFloat64Case struct {
+	n              string
+	s              []float64
+	min, max, step float64
+	v              htmlctrl.Validator
+}
+
+func (s *sliceFloat64Case) name() string {
+	return s.n
+}
+
+func (s *sliceFloat64Case) slice() interface{} {
+	return interface{}(&s.s)
+}
+
+func (s *sliceFloat64Case) mms() (min, max, step float64) {
+	return float64(s.min), float64(s.max), float64(s.step)
+}
+
+func (s *sliceFloat64Case) valid() htmlctrl.Validator {
+	return s.v
+}
+
+type sliceFloat64PtrCase struct {
+	n              string
+	s              []*float64
+	min, max, step int
+	v              htmlctrl.Validator
+}
+
+func (s *sliceFloat64PtrCase) name() string {
+	return s.n
+}
+
+func (s *sliceFloat64PtrCase) slice() interface{} {
+	return interface{}(&s.s)
+}
+
+func (s *sliceFloat64PtrCase) mms() (min, max, step float64) {
+	return float64(s.min), float64(s.max), float64(s.step)
+}
+
+func (s *sliceFloat64PtrCase) valid() htmlctrl.Validator {
+	return s.v
+}
+
 func testSlices(body jquery.JQuery) {
 	logInfo("begin testSlices")
 	logInfo("begin testSlice bool")
@@ -270,6 +354,35 @@ func testSlices(body jquery.JQuery) {
 	}
 	testSlice(body, cases)
 
+	logInfo("begin testSlice float64")
+	cases = []sliceCase{
+		&sliceFloat64Case{"[]float64 1", []float64{2.1, 4.2}, 0, 50, 2.1,
+			htmlctrl.ValidateFloat64(func(f float64) bool {
+				allowed := f != 3 && f != 5 && f != 7
+				if !allowed {
+					log("float64 may not be 3, 5, or 7")
+				}
+				return allowed
+			})},
+		&sliceFloat64Case{"[]float64 2", []float64{}, 0, 0, 1, nil},
+	}
+	testSlice(body, cases)
+
+	logInfo("begin testSlice *float64")
+	f1, f2 := 1.1, 22.2
+	cases = []sliceCase{
+		&sliceFloat64PtrCase{"[]*float64 1", []*float64{&f1, &f2}, 0, 50, 2,
+			htmlctrl.ValidateFloat64(func(f float64) bool {
+				allowed := f != 3 && f != 5 && f != 7
+				if !allowed {
+					log("float64 may not be 3, 5, or 7")
+				}
+				return allowed
+			})},
+		&sliceFloat64PtrCase{"[]*float64 2", []*float64{}, 0, 0, 1, nil},
+	}
+	testSlice(body, cases)
+
 	logInfo("end testSlices")
 }
 
@@ -298,17 +411,22 @@ func testStruct(body jquery.JQuery) {
 	logInfo("begin testStruct")
 	Bptr := true
 	Iptr := 11
+	Fptr := 1.1
 	struct1 := struct {
 		b    bool
-		B    bool  `desc:"a bool"`
-		Bptr *bool `desc:"bool ptr"`
-		Bt   bool  `desc:"Always true" valid:"BoolTrue"`
-		I    int   `desc:"an int"`
-		Iptr *int  `desc:"int ptr"`
-		Ilim int   `desc:"limited int" min:"1" max:"10" step:"2" valid:"IntNot5"`
+		B    bool     `desc:"a bool"`
+		Bptr *bool    `desc:"bool ptr"`
+		Bt   bool     `desc:"Always true" valid:"BoolTrue"`
+		I    int      `desc:"an int"`
+		Iptr *int     `desc:"int ptr"`
+		Ilim int      `desc:"limited int" min:"1" max:"10" step:"2" valid:"IntNot5"`
+		F    float64  `desc:"an float64"`
+		Fptr *float64 `desc:"float64 ptr"`
+		Flim float64  `desc:"limited float64" min:"1.2" max:"10.5" step:"1.2" valid:"Float64Not5"`
 	}{
 		false, false, &Bptr, true,
 		2, &Iptr, 1,
+		2.5, &Fptr, 1.2,
 	}
 	htmlctrl.RegisterValidator("BoolTrue", htmlctrl.ValidateBool(func(b bool) bool {
 		log("bool is locked at true")
@@ -318,6 +436,13 @@ func testStruct(body jquery.JQuery) {
 		not5 := i != 5
 		if !not5 {
 			log("int can't be 5")
+		}
+		return not5
+	}))
+	htmlctrl.RegisterValidator("Float64Not5", htmlctrl.ValidateFloat64(func(f float64) bool {
+		not5 := f != 5
+		if !not5 {
+			log("float can't be 5")
 		}
 		return not5
 	}))
