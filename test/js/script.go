@@ -169,6 +169,29 @@ func (s *sliceBoolPtrCase) valid() htmlctrl.Validator {
 	return s.v
 }
 
+type sliceIntCase struct {
+	n              string
+	s              []int
+	min, max, step int
+	v              htmlctrl.Validator
+}
+
+func (s *sliceIntCase) name() string {
+	return s.n
+}
+
+func (s *sliceIntCase) slice() interface{} {
+	return interface{}(&s.s)
+}
+
+func (s *sliceIntCase) mms() (min, max, step float64) {
+	return float64(s.min), float64(s.max), float64(s.step)
+}
+
+func (s *sliceIntCase) valid() htmlctrl.Validator {
+	return s.v
+}
+
 type sliceIntPtrCase struct {
 	n              string
 	s              []*int
@@ -217,6 +240,19 @@ func testSlices(body jquery.JQuery) {
 			return b
 		})},
 		&sliceBoolPtrCase{"[]*bool2", []*bool{}, nil},
+	}
+	testSlice(body, cases)
+
+	logInfo("begin testSlice int")
+	cases = []sliceCase{
+		&sliceIntCase{"[]int1", []int{2, 4}, 0, 50, 2, htmlctrl.ValidateInt(func(i int) bool {
+			allowed := i != 3 && i != 5 && i != 7
+			if !allowed {
+				log("int may not be 3, 5, or 7")
+			}
+			return allowed
+		})},
+		&sliceIntCase{"[]int2", []int{}, 0, 0, 1, nil},
 	}
 	testSlice(body, cases)
 
