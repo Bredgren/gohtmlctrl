@@ -124,13 +124,11 @@ type sliceCase interface {
 	slice() interface{}
 	mms() (min, max, step float64)
 	valid() htmlctrl.Validator
-	error() bool
 }
 
 type sliceBoolCase struct {
 	n string
 	s []bool
-	e bool
 }
 
 func (s *sliceBoolCase) name() string {
@@ -149,15 +147,10 @@ func (s *sliceBoolCase) valid() htmlctrl.Validator {
 	return nil
 }
 
-func (s *sliceBoolCase) error() bool {
-	return s.e
-}
-
 type sliceBoolPtrCase struct {
 	n string
 	s []*bool
 	v htmlctrl.Validator
-	e bool
 }
 
 func (s *sliceBoolPtrCase) name() string {
@@ -176,16 +169,11 @@ func (s *sliceBoolPtrCase) valid() htmlctrl.Validator {
 	return s.v
 }
 
-func (s *sliceBoolPtrCase) error() bool {
-	return s.e
-}
-
 type sliceIntPtrCase struct {
 	n              string
 	s              []*int
 	min, max, step int
 	v              htmlctrl.Validator
-	e              bool
 }
 
 func (s *sliceIntPtrCase) name() string {
@@ -204,15 +192,12 @@ func (s *sliceIntPtrCase) valid() htmlctrl.Validator {
 	return s.v
 }
 
-func (s *sliceIntPtrCase) error() bool {
-	return s.e
-}
-
 func testSlices(body jquery.JQuery) {
 	logInfo("begin testSlices")
 	logInfo("begin testSlice bool")
 	cases := []sliceCase{
-		&sliceBoolCase{"bool1", []bool{}, true},
+		&sliceBoolCase{"bool1", []bool{}},
+		&sliceBoolCase{"bool2", []bool{true, false}},
 	}
 	_, e := htmlctrl.Slice(cases[0], "error", 0, 0, 0, nil)
 	if e == nil {
@@ -230,8 +215,8 @@ func testSlices(body jquery.JQuery) {
 		&sliceBoolPtrCase{"[]*bool1", []*bool{&b1, &b2}, htmlctrl.ValidateBool(func(b bool) bool {
 			log("bool is locked at true")
 			return b
-		}), false},
-		&sliceBoolPtrCase{"[]*bool2", []*bool{}, nil, false},
+		})},
+		&sliceBoolPtrCase{"[]*bool2", []*bool{}, nil},
 	}
 	testSlice(body, cases)
 
@@ -244,8 +229,8 @@ func testSlices(body jquery.JQuery) {
 				log("int may not be 3, 5, or 7")
 			}
 			return allowed
-		}), false},
-		&sliceIntPtrCase{"[]*int2", []*int{}, 0, 0, 1, nil, false},
+		})},
+		&sliceIntPtrCase{"[]*int2", []*int{}, 0, 0, 1, nil},
 	}
 	testSlice(body, cases)
 
@@ -259,13 +244,9 @@ func testSlice(body jquery.JQuery, cases []sliceCase) {
 		min, max, step := c.mms()
 		j, e := htmlctrl.Slice(c.slice(), c.name(), min, max, step, c.valid())
 		if e != nil {
-			if c.error() {
-				log(fmt.Sprintf("%s: expected error: %s", c.name(), e))
-			} else {
-				logError(fmt.Sprintf("%s: unexpected error: %s", c.name(), e))
-			}
+			logError(fmt.Sprintf("%s: unexpected error: %s", c.name(), e))
 		}
-		if title := j.Attr("title"); !c.error() && title != c.name() {
+		if title := j.Attr("title"); title != c.name() {
 			logError(fmt.Sprintf("%s: title is %s, expected %s", c.name(), title, c.name()))
 		}
 		slices.Append(j)
