@@ -34,6 +34,7 @@ func onBodyLoad() {
 		testBool,
 		testInt,
 		testFloat64,
+		testString,
 		testSlices,
 		testStruct,
 	}
@@ -94,7 +95,7 @@ func testInt(body jquery.JQuery) {
 		{"i1", 0, -10, 10, 3, nil},
 		{"i2", 2, -100, 100, 1, htmlctrl.ValidateInt(func(i int) bool {
 			if i == 5 {
-				log("i3 can't be 5")
+				log("i can't be 5")
 			}
 			return i != 5
 		})},
@@ -131,7 +132,7 @@ func testFloat64(body jquery.JQuery) {
 		{"f1", 0.5, -10, 10, 1.5, nil},
 		{"f2", 2.1, -100, 100, 1, htmlctrl.ValidateFloat64(func(f float64) bool {
 			if f == 5.5 {
-				log("f3 can't be 5.5")
+				log("f can't be 5.5")
 			}
 			return f != 5.5
 		})},
@@ -155,6 +156,41 @@ func testFloat64(body jquery.JQuery) {
 	}
 	body.Append(float64s)
 	logInfo("end testFloat64")
+}
+
+func testString(body jquery.JQuery) {
+	logInfo("begin testString")
+	cases := []struct {
+		name  string
+		s     string
+		valid htmlctrl.Validator
+	}{
+		{"s1", "abc", nil},
+		{"s2", "", htmlctrl.ValidateString(func(s string) bool {
+			if s == "hello" {
+				log("s2 can't be 'hello'")
+			}
+			return s != "hello"
+		})},
+	}
+	strings := jq("<div>").AddClass("strings")
+	for _, c := range cases {
+		logInfo(fmt.Sprintf("test case: %#v", c))
+		j, e := htmlctrl.String(&c.s, c.name, c.valid)
+		if e != nil {
+			logError(fmt.Sprintf("%s: unexpected error: %s", c.name, e))
+		}
+		if title := j.Attr("title"); title != c.name {
+			logError(fmt.Sprintf("%s: title is %s, expected %s", c.name, title, c.name))
+		}
+		strings.Append(j)
+		c := &c
+		strings.Append(jq("<button>").SetText("verify "+c.name).Call(jquery.CLICK, func() {
+			log(c.name, c.s)
+		}))
+	}
+	body.Append(strings)
+	logInfo("end testString")
 }
 
 type sliceCase interface {
@@ -299,6 +335,50 @@ func (s *sliceFloat64PtrCase) valid() htmlctrl.Validator {
 	return s.v
 }
 
+type sliceStringCase struct {
+	n string
+	s []string
+	v htmlctrl.Validator
+}
+
+func (s *sliceStringCase) name() string {
+	return s.n
+}
+
+func (s *sliceStringCase) slice() interface{} {
+	return interface{}(&s.s)
+}
+
+func (s *sliceStringCase) mms() (min, max, step float64) {
+	return 0, 0, 0
+}
+
+func (s *sliceStringCase) valid() htmlctrl.Validator {
+	return s.v
+}
+
+type sliceStringPtrCase struct {
+	n string
+	s []*string
+	v htmlctrl.Validator
+}
+
+func (s *sliceStringPtrCase) name() string {
+	return s.n
+}
+
+func (s *sliceStringPtrCase) slice() interface{} {
+	return interface{}(&s.s)
+}
+
+func (s *sliceStringPtrCase) mms() (min, max, step float64) {
+	return 0, 0, 0
+}
+
+func (s *sliceStringPtrCase) valid() htmlctrl.Validator {
+	return s.v
+}
+
 func testSlices(body jquery.JQuery) {
 	logInfo("begin testSlices")
 	logInfo("begin testSlice bool")
@@ -383,6 +463,35 @@ func testSlices(body jquery.JQuery) {
 	}
 	testSlice(body, cases)
 
+	logInfo("begin testSlice string")
+	cases = []sliceCase{
+		&sliceStringCase{"[]string1", []string{"a", "b"},
+			htmlctrl.ValidateString(func(s string) bool {
+				allowed := s != "c" && s != "d"
+				if !allowed {
+					log("string may not be c, d")
+				}
+				return allowed
+			})},
+		&sliceStringCase{"[]string2", []string{}, nil},
+	}
+	testSlice(body, cases)
+
+	logInfo("begin testSlice *string")
+	s1, s2 := "ab", "cd"
+	cases = []sliceCase{
+		&sliceStringPtrCase{"[]*string1", []*string{&s1, &s2},
+			htmlctrl.ValidateString(func(s string) bool {
+				allowed := s != "c" && s != "d"
+				if !allowed {
+					log("string may not be c, d")
+				}
+				return allowed
+			})},
+		&sliceStringPtrCase{"[]*string2", []*string{}, nil},
+	}
+	testSlice(body, cases)
+
 	logInfo("end testSlices")
 }
 
@@ -412,6 +521,7 @@ func testStruct(body jquery.JQuery) {
 	Bptr := true
 	Iptr := 11
 	Fptr := 1.1
+	Sptr := "abc"
 	struct1 := struct {
 		b    bool
 		B    bool     `desc:"a bool"`
@@ -423,10 +533,14 @@ func testStruct(body jquery.JQuery) {
 		F    float64  `desc:"an float64"`
 		Fptr *float64 `desc:"float64 ptr"`
 		Flim float64  `desc:"limited float64" min:"1.2" max:"10.5" step:"1.2" valid:"Float64Not5"`
+		S    string   `desc:"an string"`
+		Sptr *string  `desc:"string ptr"`
+		Slim string   `desc:"limited string" valid:"StringNotHello"`
 	}{
 		false, false, &Bptr, true,
 		2, &Iptr, 1,
 		2.5, &Fptr, 1.2,
+		"a", &Sptr, "def",
 	}
 	htmlctrl.RegisterValidator("BoolTrue", htmlctrl.ValidateBool(func(b bool) bool {
 		log("bool is locked at true")
@@ -445,6 +559,13 @@ func testStruct(body jquery.JQuery) {
 			log("float can't be 5")
 		}
 		return not5
+	}))
+	htmlctrl.RegisterValidator("StringNotHello", htmlctrl.ValidateString(func(s string) bool {
+		notHello := s != "hello"
+		if !notHello {
+			log("string can't be 'hello'")
+		}
+		return notHello
 	}))
 	_, e := htmlctrl.Struct(struct1, "error")
 	if e == nil {

@@ -11,6 +11,10 @@
 		margin: 10px;
 }
 
+.strings {
+		margin: 10px;
+}
+
 .go-bool {
     margin-left: 10px;
 }
@@ -20,6 +24,10 @@
 }
 
 .go-float64 {
+		margin-left: 10px;
+}
+
+.go-string {
 		margin-left: 10px;
 }
 

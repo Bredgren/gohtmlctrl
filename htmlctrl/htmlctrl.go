@@ -1,5 +1,6 @@
-// Package htmlctrl works with gopherjs to turn Go values into html. Changes made to the html will be automatically
-// reflected in the value used to created it. After conversion you should refrain from modifying the value.
+// Package htmlctrl works with gopherjs/jquery to turn Go values into html. Changes made to the html will be
+// automatically reflected in the value used to created it. After conversion you should refrain from modifying
+// the value.
 package htmlctrl
 
 import (
@@ -22,51 +23,6 @@ var (
 )
 
 var jq = jquery.NewJQuery
-
-var validators = make(map[string]Validator)
-
-// Validator is used to validate changes made via html objects. The Valid function is given the requested new value
-// and should return true only when it is an acceptable value. If it returns false then the change is reverted
-type Validator interface {
-	Validate(interface{}) bool
-}
-
-// ValidatorFunc describes an abitrary function that implements the Validator interface.
-type ValidatorFunc func(interface{}) bool
-
-// Validate implements the Validator interface
-func (v ValidatorFunc) Validate(i interface{}) bool {
-	return v(i)
-}
-
-// ValidateBool is a function that validates bool types.
-type ValidateBool func(bool) bool
-
-// Validate implements the Validator interface but type asserts that the argument is a bool.
-func (v ValidateBool) Validate(i interface{}) bool {
-	return v(i.(bool))
-}
-
-// ValidateInt is a function that validates int types.
-type ValidateInt func(int) bool
-
-// Validate implements the Validator interface but type asserts that the argument is an int.
-func (v ValidateInt) Validate(i interface{}) bool {
-	return v(i.(int))
-}
-
-// ValidateFloat64 is a function that validates float64 types.
-type ValidateFloat64 func(float64) bool
-
-// Validate implements the Validator interface but type asserts that the argument is an float.
-func (v ValidateFloat64) Validate(i interface{}) bool {
-	return v(i.(float64))
-}
-
-// RegisterValidator associates a name with the validator function so that it may be referenced in a struct tag.
-func RegisterValidator(name string, fn Validator) {
-	validators[name] = fn
-}
 
 // Struct takes a pointer to a struct and returns a JQuery object associated with it. A non-nil error is returned
 // in the event the conversion fails.
@@ -338,7 +294,21 @@ func Float64(f *float64, desc string, min, max, step float64, valid Validator) (
 // input of text type. A non-nil error is returned in the event the conversion fails. The
 // current value of the string will be used as the initial value of the input.
 func String(s *string, desc string, valid Validator) (jquery.JQuery, error) {
-	return jq(), nil
+	j := jq("<input>").AddClass(ClassPrefix + "-string")
+	j.SetAttr("title", desc)
+	j.SetAttr("type", "text")
+	j.SetAttr("value", *s)
+	j.SetData("prev", *s)
+	j.Call(jquery.CHANGE, func(event jquery.Event) {
+		newS := event.Target.Get("value").String()
+		if valid != nil && !valid.Validate(newS) {
+			newS = j.Data("prev").(string)
+			j.SetVal(newS)
+		}
+		*s = newS
+		j.SetData("prev", newS)
+	})
+	return j, nil
 }
 
 // Choice is a special string that can only be one of the values in options. It returns a JQuery object
@@ -368,7 +338,7 @@ func convert(val reflect.Value, desc string, min, max, step float64, valid Valid
 	case reflect.Float64:
 		return Float64(intf.(*float64), desc, min, max, step, valid)
 	case reflect.String:
-		return jq(), fmt.Errorf("unimplemented type %s", val.Type().Kind())
+		return String(intf.(*string), desc, valid)
 	}
 	return jq(), fmt.Errorf("unsupported type %s", val.Type().Kind())
 }
