@@ -8,6 +8,7 @@ import (
 	"math"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/gopherjs/jquery"
 )
@@ -84,7 +85,7 @@ func Struct(structPtr interface{}, desc string) (jquery.JQuery, error) {
 			step = math.NaN()
 		}
 
-		field, e := convert(fieldValue, tag.Get("desc"), min, max, step, valid)
+		field, e := convert(fieldValue, tag.Get("desc"), tag.Get("choice"), min, max, step, valid)
 		if e != nil {
 			return jq(), fmt.Errorf("converting struct field %s (%s): %s", fieldType.Name, fieldType.Type.Kind(), e)
 		}
@@ -141,7 +142,7 @@ func Slice(slicePtr interface{}, desc string, min, max, step float64, valid Vali
 
 		for i := 0; i < sliceValue.Len(); i++ {
 			elem := sliceValue.Index(i)
-			ji, e := convert(elem, "", min, max, step, valid)
+			ji, e := convert(elem, "", "", min, max, step, valid)
 			if e != nil {
 				return fmt.Errorf("converting slice element %d (%s): %s", i, elem.Type().Kind(), e)
 			}
@@ -311,15 +312,42 @@ func String(s *string, desc string, valid Validator) (jquery.JQuery, error) {
 	return j, nil
 }
 
-// Choice is a special string that can only be one of the values in options. It returns a JQuery object
+// Choice is a special string that can only be one of the values in choices. It returns a JQuery object
 // associated with it in the form of a choice tag. A non-nil error is returned in the event the conversion
-// fails. If s is the empty string then the initial value is options[0]. If is is not empty but not in options
-// then A non-nil error is returned. If s is in options then it is used as the intial value.
-func Choice(s *string, options []string, valid Validator) (jquery.JQuery, error) {
-	return jq(), nil
+// fails. If s is the empty string then the initial value is choices[0]. If it is not empty but not in choices
+// then A non-nil error is returned. If s is in choices then it is used as the intial value.
+func Choice(s *string, choices []string, desc string, valid Validator) (jquery.JQuery, error) {
+	j := jq("<select>").AddClass(ClassPrefix + "-choice")
+	j.SetAttr("title", desc)
+	if *s == "" {
+		*s = choices[0]
+	}
+	index := -1
+	for i, c := range choices {
+		if c == *s {
+			index = i
+		}
+		j.Append(jq("<option>").SetAttr("value", c).SetText(c))
+	}
+	if index == -1 {
+		return jq(), fmt.Errorf("Default of '%s' is not among valid choices", *s)
+	}
+	j.SetData("prev", index)
+	j.SetProp("selectedIndex", index)
+	j.Call(jquery.CHANGE, func(event jquery.Event) {
+		newS := event.Target.Get("value").String()
+		newIndex := event.Target.Get("selectedIndex").Int()
+		if valid != nil && !valid.Validate(newS) {
+			newIndex = int(j.Data("prev").(float64))
+			j.SetProp("selectedIndex", newIndex)
+		}
+		*s = choices[int(newIndex)]
+		j.SetData("prev", newIndex)
+	})
+	return j, nil
 }
 
-func convert(val reflect.Value, desc string, min, max, step float64, valid Validator) (jquery.JQuery, error) {
+func convert(val reflect.Value, desc, choices string, min, max, step float64, valid Validator) (jquery.JQuery, error) {
 	kind := val.Type().Kind()
 	intf := val.Addr().Interface()
 	if val.Type().Kind() == reflect.Ptr {
@@ -328,8 +356,10 @@ func convert(val reflect.Value, desc string, min, max, step float64, valid Valid
 	}
 	switch kind {
 	case reflect.Struct:
+		// return Struct(intf, desc)
 		return jq(), fmt.Errorf("unimplemented type %s", val.Type().Kind())
 	case reflect.Slice:
+		// return Slice(intf, desc, min, max, step, valid)
 		return jq(), fmt.Errorf("unimplemented type %s", val.Type().Kind())
 	case reflect.Bool:
 		return Bool(intf.(*bool), desc, valid)
@@ -338,6 +368,9 @@ func convert(val reflect.Value, desc string, min, max, step float64, valid Valid
 	case reflect.Float64:
 		return Float64(intf.(*float64), desc, min, max, step, valid)
 	case reflect.String:
+		if choices != "" {
+			return Choice(intf.(*string), strings.Split(choices, ","), desc, valid)
+		}
 		return String(intf.(*string), desc, valid)
 	}
 	return jq(), fmt.Errorf("unsupported type %s", val.Type().Kind())

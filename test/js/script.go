@@ -35,6 +35,7 @@ func onBodyLoad() {
 		testInt,
 		testFloat64,
 		testString,
+		testChoice,
 		testSlices,
 		testStruct,
 	}
@@ -191,6 +192,47 @@ func testString(body jquery.JQuery) {
 	}
 	body.Append(strings)
 	logInfo("end testString")
+}
+
+func testChoice(body jquery.JQuery) {
+	logInfo("begin testChoice")
+	opts := []string{
+		"def",
+		"abc",
+		"invalid",
+		"hi",
+	}
+	cases := []struct {
+		name  string
+		s     string
+		valid htmlctrl.Validator
+	}{
+		{"c1", "abc", nil},
+		{"c2", "", htmlctrl.ValidateString(func(c string) bool {
+			if c == "invalid" {
+				log("c2 can't be 'invalid'")
+			}
+			return c != "invalid"
+		})},
+	}
+	choices := jq("<div>").AddClass("choices")
+	for _, c := range cases {
+		logInfo(fmt.Sprintf("test case: %#v", c))
+		j, e := htmlctrl.Choice(&c.s, opts, c.name, c.valid)
+		if e != nil {
+			logError(fmt.Sprintf("%s: unexpected error: %s", c.name, e))
+		}
+		if title := j.Attr("title"); title != c.name {
+			logError(fmt.Sprintf("%s: title is %s, expected %s", c.name, title, c.name))
+		}
+		choices.Append(j)
+		c := &c
+		choices.Append(jq("<button>").SetText("verify "+c.name).Call(jquery.CLICK, func() {
+			log(c.name, c.s)
+		}))
+	}
+	body.Append(choices)
+	logInfo("end testChoice")
 }
 
 type sliceCase interface {
@@ -533,14 +575,18 @@ func testStruct(body jquery.JQuery) {
 		F    float64  `desc:"an float64"`
 		Fptr *float64 `desc:"float64 ptr"`
 		Flim float64  `desc:"limited float64" min:"1.2" max:"10.5" step:"1.2" valid:"Float64Not5"`
-		S    string   `desc:"an string"`
+		S    string   `desc:"a string"`
 		Sptr *string  `desc:"string ptr"`
 		Slim string   `desc:"limited string" valid:"StringNotHello"`
+		C    string   `desc:"a choice" choice:"def,abc,invalid,hi"`
+		Cptr *string  `desc:"choice ptr" choice:"def,abc,invalid,hi"`
+		Clim string   `desc:"limited choice" choice:"def,abc,invalid,hi" valid:"ChoiceNotInvalid"`
 	}{
 		false, false, &Bptr, true,
 		2, &Iptr, 1,
 		2.5, &Fptr, 1.2,
 		"a", &Sptr, "def",
+		"", &Sptr, "hi",
 	}
 	htmlctrl.RegisterValidator("BoolTrue", htmlctrl.ValidateBool(func(b bool) bool {
 		log("bool is locked at true")
@@ -566,6 +612,12 @@ func testStruct(body jquery.JQuery) {
 			log("string can't be 'hello'")
 		}
 		return notHello
+	}))
+	htmlctrl.RegisterValidator("ChoiceNotInvalid", htmlctrl.ValidateString(func(c string) bool {
+		if c == "invalid" {
+			log("choice can't be 'invalid'")
+		}
+		return c != "invalid"
 	}))
 	_, e := htmlctrl.Struct(struct1, "error")
 	if e == nil {
