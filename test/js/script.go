@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/Bredgren/gohtmlctrl/htmlctrl"
 	"github.com/gopherjs/gopherjs/js"
@@ -86,7 +87,7 @@ func testInt(body jquery.JQuery) {
 	cases := []struct {
 		name           string
 		i              int
-		min, max, step int
+		min, max, step float64
 		valid          htmlctrl.Validator
 	}{
 		{"i1", 0, -10, 10, 3, nil},
@@ -96,6 +97,7 @@ func testInt(body jquery.JQuery) {
 			}
 			return i != 5
 		})},
+		{"i3", 0, math.NaN(), math.NaN(), math.NaN(), nil},
 	}
 	ints := jq("<div>").AddClass("ints")
 	for _, c := range cases {

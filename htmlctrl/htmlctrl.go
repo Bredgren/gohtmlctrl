@@ -60,15 +60,6 @@ func RegisterValidator(name string, fn Validator) {
 	validators[name] = fn
 }
 
-// type Options struct {
-// 	Desc   string
-// 	Min    float64
-// 	Max    float64
-// 	Step   float64
-// 	Choice string
-// 	Valid  Validator
-// }
-
 // Struct takes a pointer to a struct and returns a JQuery object associated with it. A non-nil error is returned
 // in the event the conversion fails.
 //
@@ -233,12 +224,22 @@ func Bool(b *bool, desc string, valid Validator) (jquery.JQuery, error) {
 // number type. Attempt to fill in a non-int value will result in it being truncated to an integer. A non-nil
 // error is returned in the event the conversion fails. The current value of the int will be used as the initial
 // value of the input.
-func Int(i *int, desc string, min, max, step int, valid Validator) (jquery.JQuery, error) {
+//
+// min, max, and step are float64 to allow the use of math.NaN() to indicate not to set the corresponding html
+// attribute. They will be truncated to ints otherwise.
+func Int(i *int, desc string, min, max, step float64, valid Validator) (jquery.JQuery, error) {
 	j := jq("<input>").AddClass(ClassPrefix + "-int")
+	j.SetAttr("title", desc)
 	j.SetAttr("type", "number")
-	j.SetAttr("min", min)
-	j.SetAttr("max", max)
-	j.SetAttr("step", step)
+	if !math.IsNaN(min) {
+		j.SetAttr("min", int(min))
+	}
+	if !math.IsNaN(max) {
+		j.SetAttr("max", int(max))
+	}
+	if !math.IsNaN(step) {
+		j.SetAttr("step", int(step))
+	}
 	j.SetAttr("value", *i)
 	j.SetData("prev", *i)
 	j.Call(jquery.CHANGE, func(event jquery.Event) {
@@ -254,7 +255,11 @@ func Int(i *int, desc string, min, max, step int, valid Validator) (jquery.JQuer
 			j.SetVal(newI)
 		}
 		// Need to check for min and max ourselves because html min and max are easy to get around
-		if (valid != nil && !valid.Validate(newI)) || (newI < min || newI > max) {
+		isValid := valid == nil || valid.Validate(newI)
+		isToLow := !math.IsNaN(min) && newI < int(min)
+		isToHigh := !math.IsNaN(max) && newI > int(max)
+		if !isValid || isToLow || isToHigh {
+			fmt.Println(isValid, isToLow, isToHigh)
 			newI = int(j.Data("prev").(float64))
 			j.SetVal(newI)
 		}
@@ -301,7 +306,7 @@ func convert(val reflect.Value, desc string, min, max, step float64, valid Valid
 	case reflect.Bool:
 		return Bool(intf.(*bool), desc, valid)
 	case reflect.Int:
-		return Int(intf.(*int), desc, int(min), int(max), int(step), valid)
+		return Int(intf.(*int), desc, min, max, step, valid)
 	case reflect.Float64:
 		return jq(), fmt.Errorf("unimplemented type %s", val.Type().Kind())
 	case reflect.String:
