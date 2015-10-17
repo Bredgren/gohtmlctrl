@@ -637,6 +637,12 @@ func testStruct(body jquery.JQuery) {
 	Iptr := 11
 	Fptr := 1.1
 	Sptr := "abc"
+	type St2 struct {
+		B []int `desc:"inner int" min:"-1" max:"11"`
+	}
+	type St1 struct {
+		A []St2 `desc:"slice of St2 struct"`
+	}
 	struct1 := struct {
 		b    bool
 		B    bool     `desc:"a bool"`
@@ -654,12 +660,14 @@ func testStruct(body jquery.JQuery) {
 		C    string   `desc:"a choice" choice:"def,abc,invalid,hi"`
 		Cptr *string  `desc:"choice ptr" choice:"def,abc,invalid,hi"`
 		Clim string   `desc:"limited choice" choice:"def,abc,invalid,hi" valid:"ChoiceNotInvalid"`
+		St   St1      `desc:"inner struct"`
 	}{
 		false, false, &Bptr, true,
 		2, &Iptr, 1,
 		2.5, &Fptr, 1.2,
 		"a", &Sptr, "def",
 		"", &Sptr, "hi",
+		St1{A: []St2{}},
 	}
 	htmlctrl.RegisterValidator("BoolTrue", htmlctrl.ValidateBool(func(b bool) bool {
 		log("bool is locked at true")
