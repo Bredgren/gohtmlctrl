@@ -65,7 +65,7 @@ func testBool(body jquery.JQuery) {
 	bools := jq("<div>").AddClass("bools")
 	for _, c := range cases {
 		logInfo(fmt.Sprintf("test case: %#v", c))
-		j, e := htmlctrl.Bool(&c.b, c.name, c.valid)
+		j, e := htmlctrl.Bool(&c.b, c.name, "bool-id", "bool-class", c.valid)
 		if e != nil {
 			logError(fmt.Sprintf("%s: unexpected error: %s", c.name, e))
 		}
@@ -105,7 +105,7 @@ func testInt(body jquery.JQuery) {
 	ints := jq("<div>").AddClass("ints")
 	for _, c := range cases {
 		logInfo(fmt.Sprintf("test case: %#v", c))
-		j, e := htmlctrl.Int(&c.i, c.name, c.min, c.max, c.step, c.valid)
+		j, e := htmlctrl.Int(&c.i, c.name, "int-id", "int-class", c.min, c.max, c.step, c.valid)
 		if e != nil {
 			logError(fmt.Sprintf("%s: unexpected error: %s", c.name, e))
 		}
@@ -142,7 +142,7 @@ func testFloat64(body jquery.JQuery) {
 	float64s := jq("<div>").AddClass("float64s")
 	for _, c := range cases {
 		logInfo(fmt.Sprintf("test case: %#v", c))
-		j, e := htmlctrl.Float64(&c.f, c.name, c.min, c.max, c.step, c.valid)
+		j, e := htmlctrl.Float64(&c.f, c.name, "float64-id", "float64-class", c.min, c.max, c.step, c.valid)
 		if e != nil {
 			logError(fmt.Sprintf("%s: unexpected error: %s", c.name, e))
 		}
@@ -177,7 +177,7 @@ func testString(body jquery.JQuery) {
 	strings := jq("<div>").AddClass("strings")
 	for _, c := range cases {
 		logInfo(fmt.Sprintf("test case: %#v", c))
-		j, e := htmlctrl.String(&c.s, c.name, c.valid)
+		j, e := htmlctrl.String(&c.s, c.name, "string-id", "string-class", c.valid)
 		if e != nil {
 			logError(fmt.Sprintf("%s: unexpected error: %s", c.name, e))
 		}
@@ -218,7 +218,7 @@ func testChoice(body jquery.JQuery) {
 	choices := jq("<div>").AddClass("choices")
 	for _, c := range cases {
 		logInfo(fmt.Sprintf("test case: %#v", c))
-		j, e := htmlctrl.Choice(&c.s, opts, c.name, c.valid)
+		j, e := htmlctrl.Choice(&c.s, opts, c.name, "choice-id", "choice-class", c.valid)
 		if e != nil {
 			logError(fmt.Sprintf("%s: unexpected error: %s", c.name, e))
 		}
@@ -474,11 +474,11 @@ func testSlices(body jquery.JQuery) {
 		&sliceBoolCase{"bool1", []bool{}},
 		&sliceBoolCase{"bool2", []bool{true, false}},
 	}
-	_, e := htmlctrl.Slice(cases[0], "error", 0, 0, 0, nil)
+	_, e := htmlctrl.Slice(cases[0], "error", "slice-id", "slice-class", 0, 0, 0, nil)
 	if e == nil {
 		logError("expected error when passing non-ptr to slice")
 	}
-	_, e = htmlctrl.Slice(&e, "error", 0, 0, 0, nil)
+	_, e = htmlctrl.Slice(&e, "error", "slice-id", "slice-class", 0, 0, 0, nil)
 	if e == nil {
 		logError("expected error when passing ptr to non-slice")
 	}
@@ -615,7 +615,7 @@ func testSlice(body jquery.JQuery, cases []sliceCase) {
 	for _, c := range cases {
 		logInfo(fmt.Sprintf("test case: %#v", c))
 		min, max, step := c.mms()
-		j, e := htmlctrl.Slice(c.slice(), c.name(), min, max, step, c.valid())
+		j, e := htmlctrl.Slice(c.slice(), c.name(), "slice-id", "slice-class", min, max, step, c.valid())
 		if e != nil {
 			logError(fmt.Sprintf("%s: unexpected error: %s", c.name(), e))
 		}
@@ -638,29 +638,29 @@ func testStruct(body jquery.JQuery) {
 	Fptr := 1.1
 	Sptr := "abc"
 	type St2 struct {
-		B []int `desc:"inner int" min:"-1" max:"11"`
+		B []int `desc:"inner int" id:"St2-B" class:"struct-int-slice" min:"-1" max:"11"`
 	}
 	type St1 struct {
-		A []St2 `desc:"slice of St2 struct"`
+		A []St2 `desc:"slice of St2 struct" id:"St1-A" class:"struct-struct-slice"`
 	}
 	struct1 := struct {
 		b    bool
 		B    bool     `desc:"a bool"`
-		Bptr *bool    `desc:"bool ptr"`
+		Bptr *bool    `desc:"bool ptr" id:"s1-Bptr" class:"struct-bool-ptr"`
 		Bt   bool     `desc:"Always true" valid:"BoolTrue"`
-		I    int      `desc:"an int"`
+		I    int      `desc:"an int" id:"s1-I" class:"struct-int"`
 		Iptr *int     `desc:"int ptr"`
 		Ilim int      `desc:"limited int" min:"1" max:"10" step:"2" valid:"IntNot5"`
-		F    float64  `desc:"an float64"`
+		F    float64  `desc:"an float64" id:"s1-F" class:"struct-float64"`
 		Fptr *float64 `desc:"float64 ptr"`
 		Flim float64  `desc:"limited float64" min:"1.2" max:"10.5" step:"1.2" valid:"Float64Not5"`
-		S    string   `desc:"a string"`
+		S    string   `desc:"a string" id:"s1-S" class:"struct-string"`
 		Sptr *string  `desc:"string ptr"`
 		Slim string   `desc:"limited string" valid:"StringNotHello"`
-		C    string   `desc:"a choice" choice:"def,abc,invalid,hi"`
+		C    string   `desc:"a choice" choice:"def,abc,invalid,hi" id:"s1-C" class:"struct-choice"`
 		Cptr *string  `desc:"choice ptr" choice:"def,abc,invalid,hi"`
 		Clim string   `desc:"limited choice" choice:"def,abc,invalid,hi" valid:"ChoiceNotInvalid"`
-		St   St1      `desc:"inner struct"`
+		St   St1      `desc:"inner struct" id:"s1-St" class:"struct-struct"`
 	}{
 		false, false, &Bptr, true,
 		2, &Iptr, 1,
@@ -700,16 +700,16 @@ func testStruct(body jquery.JQuery) {
 		}
 		return c != "invalid"
 	}))
-	_, e := htmlctrl.Struct(struct1, "error")
+	_, e := htmlctrl.Struct(struct1, "error", "struct-id", "struct-class")
 	if e == nil {
 		logError("expected error when passing non-ptr")
 	}
-	_, e = htmlctrl.Struct(&e, "error")
+	_, e = htmlctrl.Struct(&e, "error", "struct-id", "struct-class")
 	if e == nil {
 		logError("expected error when passing ptr to non-slice")
 	}
 
-	j, e := htmlctrl.Struct(&struct1, "struct1")
+	j, e := htmlctrl.Struct(&struct1, "struct1", "struct-id", "struct-class")
 	if e != nil {
 		logError(fmt.Sprintf("%s: unexpected error: %s", "struct1", e))
 	}

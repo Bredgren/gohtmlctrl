@@ -32,13 +32,15 @@ var jq = jquery.NewJQuery
 // are ignored. A type is supported if it has it's own conversion function in this package.
 //
 // Struct tags recognized
-//  desc - A description of the struct field. Becomes the title attribute of the html tag.
+//  title - Becomes the "title" html attribute
+//  id - Becomes the "id" html attribute
+//  class - Becomes the "class" html attribute
 //  min - Minimum value for a number
 //  max - Maximum value for a number
 //  step - How much the up and down buttons change a number by
 //  choice - Comma separated list. This will created an html choice tag when used on a string type.
 //  valid - Name of a registered validator.
-func Struct(structPtr interface{}, desc string) (jquery.JQuery, error) {
+func Struct(structPtr interface{}, title, id, class string) (jquery.JQuery, error) {
 	t, v := reflect.TypeOf(structPtr), reflect.ValueOf(structPtr)
 	if t.Kind() != reflect.Ptr {
 		return jq(), fmt.Errorf("structPtr should be a pointer, got %s instead", t.Kind())
@@ -48,8 +50,8 @@ func Struct(structPtr interface{}, desc string) (jquery.JQuery, error) {
 	}
 	structType, structValue := t.Elem(), v.Elem()
 
-	j := jq("<div>").AddClass(ClassPrefix + "-struct")
-	j.SetAttr("title", desc)
+	j := jq("<div>").AddClass(ClassPrefix + "-struct").AddClass(class)
+	j.SetAttr("title", title).SetAttr("id", id)
 	for i := 0; i < structType.NumField(); i++ {
 		fieldType := structType.Field(i)
 		// Ignore unexported fields
@@ -85,7 +87,8 @@ func Struct(structPtr interface{}, desc string) (jquery.JQuery, error) {
 			step = math.NaN()
 		}
 
-		field, e := convert(fieldValue, tag.Get("desc"), tag.Get("choice"), min, max, step, valid)
+		field, e := convert(fieldValue, tag.Get("title"), tag.Get("id"), tag.Get("class"), tag.Get("choice"),
+			min, max, step, valid)
 		if e != nil {
 			return jq(), fmt.Errorf("converting struct field %s (%s): %s", fieldType.Name, fieldType.Type.Kind(), e)
 		}
@@ -104,7 +107,7 @@ func Struct(structPtr interface{}, desc string) (jquery.JQuery, error) {
 // returned if the slice's type is not supported.
 //
 // min, max, step, and valid will be applied if the slices element type supports it.
-func Slice(slicePtr interface{}, desc string, min, max, step float64, valid Validator) (jquery.JQuery, error) {
+func Slice(slicePtr interface{}, title, id, class string, min, max, step float64, valid Validator) (jquery.JQuery, error) {
 	t, v := reflect.TypeOf(slicePtr), reflect.ValueOf(slicePtr)
 	if t.Kind() != reflect.Ptr {
 		return jq(), fmt.Errorf("slicePtr should be a pointer, got %s instead", t.Kind())
@@ -115,8 +118,8 @@ func Slice(slicePtr interface{}, desc string, min, max, step float64, valid Vali
 	sliceType, sliceValue := t.Elem(), v.Elem()
 	sliceElemType := sliceType.Elem()
 
-	j := jq("<list>").AddClass(ClassPrefix + "-slice")
-	j.SetAttr("title", desc)
+	j := jq("<list>").AddClass(ClassPrefix + "-slice").AddClass(class)
+	j.SetAttr("title", title).SetAttr("id", id)
 
 	var populate func() error
 	populate = func() error {
@@ -142,7 +145,7 @@ func Slice(slicePtr interface{}, desc string, min, max, step float64, valid Vali
 
 		for i := 0; i < sliceValue.Len(); i++ {
 			elem := sliceValue.Index(i)
-			ji, e := convert(elem, "", "", min, max, step, valid)
+			ji, e := convert(elem, "", "", "", "", min, max, step, valid)
 			if e != nil {
 				return fmt.Errorf("converting slice element %d (%s): %s", i, elem.Type().Kind(), e)
 			}
@@ -179,10 +182,10 @@ func Slice(slicePtr interface{}, desc string, min, max, step float64, valid Vali
 // Bool takes a pointer to a bool value and returns a JQuery object associated with it in the form of a checkbox.
 // A non-nil error is returned in the event the conversion fails. The current value of the bool will be used as
 // the initial value of the checkbox.
-func Bool(b *bool, desc string, valid Validator) (jquery.JQuery, error) {
-	j := jq("<input>").AddClass(ClassPrefix + "-bool")
+func Bool(b *bool, title, id, class string, valid Validator) (jquery.JQuery, error) {
+	j := jq("<input>").AddClass(ClassPrefix + "-bool").AddClass(class)
 	j.SetAttr("type", "checkbox")
-	j.SetAttr("title", desc)
+	j.SetAttr("title", title).SetAttr("id", id)
 	j.SetProp("checked", *b)
 	j.SetData("prev", *b)
 	j.Call(jquery.CHANGE, func(event jquery.Event) {
@@ -209,9 +212,9 @@ func Bool(b *bool, desc string, valid Validator) (jquery.JQuery, error) {
 //
 // min, max, and step are float64 to allow the use of math.NaN() to indicate not to set the corresponding html
 // attribute. They will be truncated to ints otherwise.
-func Int(i *int, desc string, min, max, step float64, valid Validator) (jquery.JQuery, error) {
-	j := jq("<input>").AddClass(ClassPrefix + "-int")
-	j.SetAttr("title", desc)
+func Int(i *int, title, id, class string, min, max, step float64, valid Validator) (jquery.JQuery, error) {
+	j := jq("<input>").AddClass(ClassPrefix + "-int").AddClass(class)
+	j.SetAttr("title", title).SetAttr("id", id)
 	j.SetAttr("type", "number")
 	if !math.IsNaN(min) {
 		j.SetAttr("min", int(min))
@@ -254,9 +257,9 @@ func Int(i *int, desc string, min, max, step float64, valid Validator) (jquery.J
 // Float64 takes a pointer to a float64 value and returns a JQuery object associated with it in the form of an
 // input of number type. A non-nil error is returned in the event the conversion fails. The current value of the
 // float64 will be used as the initial value of the input.
-func Float64(f *float64, desc string, min, max, step float64, valid Validator) (jquery.JQuery, error) {
-	j := jq("<input>").AddClass(ClassPrefix + "-float64")
-	j.SetAttr("title", desc)
+func Float64(f *float64, title, id, class string, min, max, step float64, valid Validator) (jquery.JQuery, error) {
+	j := jq("<input>").AddClass(ClassPrefix + "-float64").AddClass(class)
+	j.SetAttr("title", title).SetAttr("id", id)
 	j.SetAttr("type", "number")
 	if !math.IsNaN(min) {
 		j.SetAttr("min", min)
@@ -294,9 +297,9 @@ func Float64(f *float64, desc string, min, max, step float64, valid Validator) (
 // String takes a pointer to a string value and returns a JQuery object associated with it in the form of an
 // input of text type. A non-nil error is returned in the event the conversion fails. The
 // current value of the string will be used as the initial value of the input.
-func String(s *string, desc string, valid Validator) (jquery.JQuery, error) {
-	j := jq("<input>").AddClass(ClassPrefix + "-string")
-	j.SetAttr("title", desc)
+func String(s *string, title, id, class string, valid Validator) (jquery.JQuery, error) {
+	j := jq("<input>").AddClass(ClassPrefix + "-string").AddClass(class)
+	j.SetAttr("title", title).SetAttr("id", id)
 	j.SetAttr("type", "text")
 	j.SetAttr("value", *s)
 	j.SetData("prev", *s)
@@ -316,9 +319,9 @@ func String(s *string, desc string, valid Validator) (jquery.JQuery, error) {
 // associated with it in the form of a choice tag. A non-nil error is returned in the event the conversion
 // fails. If s is the empty string then the initial value is choices[0]. If it is not empty but not in choices
 // then A non-nil error is returned. If s is in choices then it is used as the intial value.
-func Choice(s *string, choices []string, desc string, valid Validator) (jquery.JQuery, error) {
-	j := jq("<select>").AddClass(ClassPrefix + "-choice")
-	j.SetAttr("title", desc)
+func Choice(s *string, choices []string, title, id, class string, valid Validator) (jquery.JQuery, error) {
+	j := jq("<select>").AddClass(ClassPrefix + "-choice").AddClass(class)
+	j.SetAttr("title", title).SetAttr("id", id)
 	if *s == "" {
 		*s = choices[0]
 	}
@@ -347,7 +350,7 @@ func Choice(s *string, choices []string, desc string, valid Validator) (jquery.J
 	return j, nil
 }
 
-func convert(val reflect.Value, desc, choices string, min, max, step float64, valid Validator) (jquery.JQuery, error) {
+func convert(val reflect.Value, title, id, class, choices string, min, max, step float64, valid Validator) (jquery.JQuery, error) {
 	kind := val.Type().Kind()
 	intf := val.Addr().Interface()
 	if val.Type().Kind() == reflect.Ptr {
@@ -356,20 +359,20 @@ func convert(val reflect.Value, desc, choices string, min, max, step float64, va
 	}
 	switch kind {
 	case reflect.Struct:
-		return Struct(intf, desc)
+		return Struct(intf, title, id, class)
 	case reflect.Slice:
-		return Slice(intf, desc, min, max, step, valid)
+		return Slice(intf, title, id, class, min, max, step, valid)
 	case reflect.Bool:
-		return Bool(intf.(*bool), desc, valid)
+		return Bool(intf.(*bool), title, id, class, valid)
 	case reflect.Int:
-		return Int(intf.(*int), desc, min, max, step, valid)
+		return Int(intf.(*int), title, id, class, min, max, step, valid)
 	case reflect.Float64:
-		return Float64(intf.(*float64), desc, min, max, step, valid)
+		return Float64(intf.(*float64), title, id, class, min, max, step, valid)
 	case reflect.String:
 		if choices != "" {
-			return Choice(intf.(*string), strings.Split(choices, ","), desc, valid)
+			return Choice(intf.(*string), strings.Split(choices, ","), title, id, class, valid)
 		}
-		return String(intf.(*string), desc, valid)
+		return String(intf.(*string), title, id, class, valid)
 	}
 	return jq(), fmt.Errorf("unsupported type %s", val.Type().Kind())
 }
