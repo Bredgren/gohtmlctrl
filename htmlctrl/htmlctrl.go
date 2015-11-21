@@ -96,7 +96,6 @@ func Struct(structPtr interface{}, title, id, class string) (jquery.JQuery, erro
 		jf.Append(jq("<label>").SetText(fieldType.Name))
 		jf.Append(field)
 		j.Append(jf)
-		fmt.Println(fieldType, fieldValue, tag)
 	}
 	return j, nil
 }
@@ -244,7 +243,6 @@ func Int(i *int, title, id, class string, min, max, step float64, valid Validato
 		isToLow := !math.IsNaN(min) && newI < int(min)
 		isToHigh := !math.IsNaN(max) && newI > int(max)
 		if !isValid || isToLow || isToHigh {
-			fmt.Println(isValid, isToLow, isToHigh)
 			newI = int(j.Data("prev").(float64))
 			j.SetVal(newI)
 		}
@@ -284,7 +282,6 @@ func Float64(f *float64, title, id, class string, min, max, step float64, valid 
 		isToLow := !math.IsNaN(min) && newF < min
 		isToHigh := !math.IsNaN(max) && newF > max
 		if !isValid || isToLow || isToHigh {
-			fmt.Println(isValid, isToLow, isToHigh)
 			newF = j.Data("prev").(float64)
 			j.SetVal(newF)
 		}
